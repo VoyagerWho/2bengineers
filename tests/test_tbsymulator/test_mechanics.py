@@ -81,11 +81,16 @@ def test_simulation():
     
     endTime = 3
     
+    print()
+    print("time", "dt", "strain", "X", "Y", "Vx", "Vy", "V")
+    
     while time < endTime:
         deltaTime = mechanics.simulateTimeStep(bridge, deltaTime, tol = 1e-2)
         time += deltaTime
         it += 1
         #if it % 1000 == 0 or time >= endTime: 
+        print(time, deltaTime, bridge.connections[len(bridge.connections)-1].getStrain(), bridge.points[len(bridge.points)-1].position.x, bridge.points[len(bridge.points)-1].position.y, bridge.points[len(bridge.points)-1].velocity.x, bridge.points[len(bridge.points)-1].velocity.y, bridge.points[len(bridge.points)-1].velocity.length())
+            
             #print()
             #print(it, time, "\t", deltaTime)
 

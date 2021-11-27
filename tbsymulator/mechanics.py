@@ -139,6 +139,7 @@ def simulateTimeStep(bridge, timeStep : float = 1e-6, gravity : m2.Vector2 = m2.
         if it > 0:
             for i in range(len(orginalJoints)):
                 bridge.points[i].assign(orginalJoints[i])
+            timeStep *= (math.sqrt(5)-1)/2
                 
         it += 1
             
@@ -165,8 +166,6 @@ def simulateTimeStep(bridge, timeStep : float = 1e-6, gravity : m2.Vector2 = m2.
             delta += bridge.points[i].calcDelta(copyJoints[i])
         
         copyJoints.clear()
-        
-        timeStep *= (math.sqrt(5)-1)/2
     
     orginalJoints.clear()
     
