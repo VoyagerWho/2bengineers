@@ -79,7 +79,7 @@ def test_simulation():
     
     it = 0
     
-    endTime = 15 # ~3:59
+    endTime = 15 # 20.55s
     
     timeValues = []
     XValues = []
@@ -101,7 +101,7 @@ def test_simulation():
         print("time", "dt", "strain", "X", "Y", "Vx", "Vy", "V")
     
     while time < endTime:
-        deltaTime = mechanics.simulateTimeStep(bridge, deltaTime, tol = 1e-2, resistance = 1e-1)
+        deltaTime = mechanics.simulateTimeStep(bridge, deltaTime, tol = 1e-3, resistance = 1e-1)
         time += deltaTime
         it += 1
         
