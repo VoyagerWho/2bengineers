@@ -84,9 +84,9 @@ class Connection:
             forcesA : float = self.jointA.forces.length()
             forcesB : float = self.jointB.forces.length()
             if self.jointA != None:
-                self.jointA.interia += self.mass/2 + abs(self.jointA.forces.x * v.y - self.jointA.forces.y * v.x)*self.mass/12/forcesA
+                self.jointA.interia += self.mass/2 # + sqr(self.jointA.forces.x / forcesA * v.y - self.jointA.forces.y / forcesA * v.x)*self.mass/12
             if self.jointB != None:
-                self.jointB.interia += self.mass/2 + abs(self.jointB.forces.x * v.y - self.jointB.forces.y * v.x)*self.mass/12/forcesB
+                self.jointB.interia += self.mass/2 # + sqr(self.jointB.forces.x / forcesB * v.y - self.jointB.forces.y * v.x / forcesB)*self.mass/12
                 
     def getStrain(self): # do animacji
         if self.broken:

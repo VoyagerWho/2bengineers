@@ -1,5 +1,5 @@
 import tbsymulator.mechanics as mechanics
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 def test_sqr():
     assert mechanics.sqr(2) == 4
@@ -79,53 +79,68 @@ def test_simulation():
     
     it = 0
     
-    endTime = 3
+    endTime = 15 # ~3:59
     
-    print()
-    print("time", "dt", "strain", "X", "Y", "Vx", "Vy", "V")
+    timeValues = []
+    XValues = []
+    YValues = []
+    VxValues = []
+    VyValues = []
+    VValues = []
+    strainValues = []
+    
+    StdOut = True
+    Plots = True
+    
+    PlotInterval = 0.01
+    
+    PlotTime = -10.0
+    
+    if StdOut:
+        print()
+        print("time", "dt", "strain", "X", "Y", "Vx", "Vy", "V")
     
     while time < endTime:
-        deltaTime = mechanics.simulateTimeStep(bridge, deltaTime, tol = 1e-2)
+        deltaTime = mechanics.simulateTimeStep(bridge, deltaTime, tol = 1e-2, resistance = 1e-1)
         time += deltaTime
         it += 1
-        #if it % 1000 == 0 or time >= endTime: 
-        print(time, deltaTime, bridge.connections[len(bridge.connections)-1].getStrain(), bridge.points[len(bridge.points)-1].position.x, bridge.points[len(bridge.points)-1].position.y, bridge.points[len(bridge.points)-1].velocity.x, bridge.points[len(bridge.points)-1].velocity.y, bridge.points[len(bridge.points)-1].velocity.length())
-            
-            #print()
-            #print(it, time, "\t", deltaTime)
-
-            #print(bridge.points[len(bridge.points)-1])
-            #print(bridge.connections[len(bridge.connections)-1].getStrain())
-
-            #for point in bridge.points:
-                #print(point.position)
-            
-            #for connection in bridge.connections:
-                #print(connection.getStrain())
-    
-    #plt.figure()
-
-    #for connection in bridge.connections:
         
-        #s = connection.getStrain()
-        #if not connection.broken:
-            #plt.plot([connection.jointA.position.x, connection.jointB.position.x], [connection.jointA.position.y, connection.jointB.position.y])
-    
-    #plt.savefig("img.png")
-    #plt.close()
+        if Plots and (time - PlotTime >= PlotInterval): 
+            timeValues.append(time)
+            XValues.append(bridge.points[len(bridge.points)-1].position.x)
+            YValues.append(bridge.points[len(bridge.points)-1].position.y)
+            VxValues.append(bridge.points[len(bridge.points)-1].velocity.x)
+            VyValues.append(bridge.points[len(bridge.points)-1].velocity.y)
+            VValues.append(bridge.points[len(bridge.points)-1].velocity.length())
+            strainValues.append(bridge.connections[len(bridge.connections)-1].getStrain())
+            PlotTime = time
+            if not StdOut:
+                print(time)
         
-  
-    
-    #print()
-    #print(len(bridge.points))
-    
-    #for i in range(len(bridge.points)):
-        #print(i, bridge.points[i].position.x, bridge.points[i].position.y)
+        if StdOut:
+            print(time, deltaTime, bridge.connections[len(bridge.connections)-1].getStrain(), bridge.points[len(bridge.points)-1].position.x, bridge.points[len(bridge.points)-1].position.y, bridge.points[len(bridge.points)-1].velocity.x, bridge.points[len(bridge.points)-1].velocity.y, bridge.points[len(bridge.points)-1].velocity.length())
+                
+          
+    if Plots:
         
-    #print(len(bridge.connections))
-    #for connection in bridge.connections:
-        #print(bridge.points.index(connection.jointA), bridge.points.index(connection.jointB), connection.getStrain())
-  
-    
+        plt.figure()
+        plt.plot(timeValues, XValues, ls='-', lw=1, label='X');
+        plt.plot(timeValues, YValues, ls='-', lw=1, label='Y');
+        plt.plot(timeValues, VxValues, ls='-', lw=1, label='Vx');
+        plt.plot(timeValues, VyValues, ls='-', lw=1, label='Vy');
+        plt.legend()
+        plt.savefig("Positions.png")
+        plt.close()
+        
+        fig, ax1 = plt.subplots()
+        ax1.plot(timeValues, strainValues, ls='-', lw=1, label='strain');
+        
+        ax2 = ax1.twinx()
+        
+        ax2.plot(timeValues, VValues, ls='-', color='y', lw=1, label='Velocity');
+        fig.legend()
+        fig.savefig("StrainVsVelocity.png")
+        
+   
         
     
