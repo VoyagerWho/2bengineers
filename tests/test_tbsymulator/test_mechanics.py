@@ -7,6 +7,15 @@ def test_sqr():
     assert mechanics.sqr(3) == 9
     assert mechanics.sqr(-3) == 9
     
+def test_ConnectionType():
+    assert mechanics.ConnectionType.YOUNG == mechanics.ConnectionType.LINEAR
+    assert mechanics.ConnectionType.SPRING == mechanics.ConnectionType.SQUARE
+    assert isinstance(mechanics.ConnectionType.YOUNG, mechanics.ConnectionType)
+    assert isinstance(mechanics.ConnectionType.LINEAR, mechanics.ConnectionType)
+    assert isinstance(mechanics.ConnectionType.SQUARE, mechanics.ConnectionType)
+    assert isinstance(mechanics.ConnectionType.SPRING, mechanics.ConnectionType)
+    
+    
 def createSampleBridge():
     bridge = mechanics.Bridge()
     

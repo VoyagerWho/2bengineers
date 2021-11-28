@@ -1,5 +1,6 @@
 import math
 import tbsymulator.math2d as m2
+from enum import Enum
 
 def sqr(x):
     return x * x
@@ -49,10 +50,16 @@ class Joint:
     def __str__(self):
         return "Position = " + str(self.position) + "\tVelocity = " + str(self.velocity) + "\tForces = " + str(self.forces) + "\tInteria = " + str(self.interia) + "\tIsStationary = " + str(self.isStationary)
     
+class ConnectionType(Enum):
+    
+    YOUNG = 0
+    SPRING = 1
+    LINEAR = YOUNG
+    SQUARE = SPRING
         
 class Connection:
     
-    def __init__(self, jointA : Joint, jointB : Joint, mass : float, maxCompression : float, compressionForceRate : float, maxStrech : float, strechForceRate : float):
+    def __init__(self, jointA : Joint, jointB : Joint, mass : float, maxCompression : float, compressionForceRate : float, maxStrech : float, strechForceRate : float, connectionType : ConnectionType = ConnectionType.SPRING):
         self.jointA : Joint = jointA
         self.jointB : Joint = jointB
         self.mass : float = mass
@@ -62,14 +69,19 @@ class Connection:
         self.strechForceRate : float = strechForceRate
         self.length : float = (self.jointA.position - self.jointB.position).length()
         self.broken = False
+        self.connectionType : ConnectionType = connectionType
         
     def getForce(self): # for jointA / Force jointB = - Force jointA
         v : m2.Vector2 = (self.jointA.position - self.jointB.position)
         currentLength : float = v.length()
+        if self.connectionType == ConnectionType.YOUNG:
+            f : float = sqr(currentLength - self.length) / 2
+        elif self.connectionType == ConnectionType.SPRING:
+            f : float = abs(currentLength - self.length)
         if currentLength < self.length:
-            return v.normal() * (-self.compressionForceRate * sqr(currentLength - self.length) / 2)
+            return v.normal() * (-self.compressionForceRate * f)
         if currentLength > self.length:
-            return v.normal() * (-self.strechForceRate * sqr(currentLength - self.length) / 2)
+            return v.normal() * (-self.strechForceRate * f)
         return m2.Vector2()
         
     def addForces(self, gravity : m2.Vector2 = m2.Vector2()):
