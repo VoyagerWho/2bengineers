@@ -110,6 +110,7 @@ def test_RenderBridge():
     
 def test_RenderBridge2():
     skip = False
+    trueRender = False
     if skip:
         return
     
@@ -119,20 +120,24 @@ def test_RenderBridge2():
     frameCount = 0
     prevFrame = 0.0
     time = 0.0
+    it = 0
     deltaTime = 1e-6
     
     while time < endTime:
         deltaTime = mechanics.simulateTimeStep(bridge, deltaTime, tol = 1e-3, resistance = 0.5, realBrakes = True, toleranceCountDependent = True)
         time += deltaTime
+        it += 1
         #deltaTime = min(1.0/fps/2, deltaTime)
         #print(time)
         
         if time >= prevFrame + 1.0/fps:
-            bridge.render("frame" + str(frameCount) + ".png")
+            if trueRender: 
+                bridge.render("frame" + str(frameCount) + ".png")
             print("frame: " + str(frameCount))
             frameCount += 1
             prevFrame = time
     
+    print("average dt =", time/it)
         #print(time, deltaTime, bridge.connections[len(bridge.connections)-1].getStrain(), bridge.points[len(bridge.points)-1].position.x, bridge.points[len(bridge.points)-1].position.y, bridge.points[len(bridge.points)-1].velocity.x, bridge.points[len(bridge.points)-1].velocity.y, bridge.points[len(bridge.points)-1].velocity.length())
                
     

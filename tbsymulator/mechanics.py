@@ -22,9 +22,9 @@ class Joint:
         
     def move(self, time : float, resistance : float):
         if (not self.isStationary) and (self.interia != 0):
-            a : m2.Vector2 = self.forces/self.interia
-            self.position += self.velocity * time + a * (sqr(time)/2)
-            self.velocity += a * time
+            #a : m2.Vector2 = self.forces/self.interia
+            self.velocity += self.forces * (time/self.interia)
+            self.position += self.velocity * time # + a * (sqr(time)/2) 
             self.velocity *= math.exp(-time*resistance)
         return self
     
@@ -32,20 +32,17 @@ class Joint:
         self.forces = m2.Vector2()
         self.interia = 0.0
     
-    def copy(self):
-        c = Joint(self.position)
-        c.forces = self.forces.copy()
-        c.isStationary = self.isStationary
-        c.velocity = self.velocity.copy()
-        c.interia = self.interia
-        return c
-    
     def assign(self, j):
         self.position = j.position.copy()
         self.forces = j.forces.copy()
         self.isStationary = j.isStationary
         self.velocity = j.velocity.copy()
         self.interia = j.interia
+        
+    def copy(self):
+        c = Joint(self.position)
+        c.assign(self)
+        return c
         
     def calcDelta(self, j):      
         m : float = (self.position.length() + self.velocity.length() + self.forces.length() + j.position.length() + j.velocity.length() + j.forces.length())/2
@@ -234,15 +231,19 @@ def simulateTimeStep(bridge, timeStep : float = 1e-6, gravity : m2.Vector2 = m2.
     for joint in bridge.points:
         orginalJoints.append(joint.copy())
         
-    delta = tol + 1
+    delta = tol+1
     it = 0
+    goldProportion = (math.sqrt(5)-1)/2
     
-    while delta > tol * {True: len(bridge.points)*len(bridge.connections), False: 1.0}[toleranceCountDependent]:
+    pointCount = len(bridge.points)
+    
+    while delta > tol * {True: pointCount, False: 1.0}[toleranceCountDependent]:
         
         if it > 0:
             for i in range(len(orginalJoints)):
                 bridge.points[i].assign(orginalJoints[i])
-            timeStep *= (math.sqrt(5)-1)/2
+                
+        timeStep *= goldProportion
                 
         it += 1
             
@@ -287,6 +288,7 @@ def simulateTimeStep(bridge, timeStep : float = 1e-6, gravity : m2.Vector2 = m2.
             v[3].maxStrech *= 2
         bridge.connections.append(v[2])
         bridge.connections.append(v[3])
+        pointCount += 2
         
     additions.clear()
             
