@@ -1,4 +1,4 @@
-import math
+from math import sqrt, exp
 import tbsymulator.math2d as m2
 from enum import Enum
 
@@ -22,10 +22,10 @@ class Joint:
         
     def move(self, time : float, resistance : float):
         if (not self.isStationary) and (self.interia != 0):
-            #a : m2.Vector2 = self.forces/self.interia
-            self.velocity += self.forces * (time/self.interia)
-            self.position += self.velocity * time # + a * (sqr(time)/2) 
-            self.velocity *= math.exp(-time*resistance)
+            dv : m2.Vector2 = self.forces*(time/self.interia)
+            self.position += self.velocity * time + dv * (time/2) 
+            self.velocity += dv
+            self.velocity *= exp(-time*resistance)
         return self
     
     def prepare(self):
@@ -227,13 +227,11 @@ class Bridge:
 def simulateTimeStep(bridge, timeStep : float = 1e-6, gravity : m2.Vector2 = m2.Vector2(0, -9.81), resistance : float = 1e-3, tol : float = 1e-12, realBrakes : bool = False, toleranceCountDependent : bool = False, safeBreaking : bool = False):
    
     copyJoints = []
-    orginalJoints = []
-    for joint in bridge.points:
-        orginalJoints.append(joint.copy())
+    orginalJoints = [joint.copy() for joint in bridge.points]
         
     delta = tol+1
     it = 0
-    goldProportion = (math.sqrt(5)-1)/2
+    goldProportion = (sqrt(5)-1)/2
     
     pointCount = len(bridge.points)
     
@@ -291,6 +289,5 @@ def simulateTimeStep(bridge, timeStep : float = 1e-6, gravity : m2.Vector2 = m2.
         pointCount += 2
         
     additions.clear()
-            
     
     return timeStep * 2 
