@@ -231,7 +231,7 @@ def test_MulMatrix2x2():
 def test_CopyMatrix2x2():
     m = m2.Matrix2x2([1, 2], [3, 4])
     c = m.copy()
-    c.identity()
+    c.assign(m2.Matrix2x2.identity())
     assert m.getData(0, 0) == 1 and m.getData(1, 0) == 2 and m.getData(0, 1) == 3 and m.getData(1, 1) == 4
     assert c.getData(0, 0) == 1 and c.getData(1, 0) == 0 and c.getData(0, 1) == 0 and c.getData(1, 1) == 1
 

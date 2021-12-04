@@ -108,10 +108,7 @@ class Matrix2x2:
 
     @staticmethod
     def identity():
-        a = Matrix2x2()
-        a.setData(0, 0, 1)
-        a.setData(1, 1, 1)
-        return a
+        return Matrix2x2(UpRow = [1, 0], DownRow = [0, 1])
 
     @staticmethod
     def rotation(angle: float):
@@ -159,6 +156,13 @@ class Matrix2x2:
 
     def copy(self):
         return Matrix2x2(UpRow=self.getRow(0), DownRow=self.getRow(1))
+    
+    def assign(self, another):
+        self.setRow(0, another.getRow(0))
+        self.setRow(1, another.getRow(1))
 
     def det(self):
         return self.__data[0][0] * self.__data[1][1] - self.__data[1][0] * self.__data[0][1]
+    
+    def __str__(self):
+        return "[" + str(self.getRow(0)) + "; " + str(self.getRow(1)) + "]"

@@ -114,9 +114,9 @@ class Connection:
             forcesA: float = self.jointA.forces.length()
             forcesB: float = self.jointB.forces.length()
             if self.jointA != None:
-                self.jointA.interia += self.mass / 2  # + sqr(self.jointA.forces.x / forcesA * v.y - self.jointA.forces.y / forcesA * v.x)*self.mass/12
+                self.jointA.interia += self.mass / 2  
             if self.jointB != None:
-                self.jointB.interia += self.mass / 2  # + sqr(self.jointB.forces.x / forcesB * v.y - self.jointB.forces.y * v.x / forcesB)*self.mass/12
+                self.jointB.interia += self.mass / 2  
 
     def getStrain(self):  # do animacji
         if self.broken:
@@ -196,7 +196,7 @@ class Bridge:
             p.indexOnBridge = i
 
         if i == 0:
-            return [], [],
+            return lines, points,
 
         epsilon: float = +1e-38;
 
@@ -234,7 +234,7 @@ class Bridge:
         for point in self.points:
             points.append(((point.position.x + rx) * k, (point.position.y + ry) * k, point.isStationary))
 
-        return (lines, points)
+        return lines, points
 
     def render(self, fileName: str, width: int = 640, height: int = 480, bounds: float = 1.3):
 

@@ -1,26 +1,27 @@
 import tbsymulator.mechanics as mechanics
+import tbutils.bridgeparts as bridgeparts
 import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw
 
 
 def test_sqr():
-    assert mechanics.sqr(2) == 4
-    assert mechanics.sqr(-2) == 4
-    assert mechanics.sqr(3) == 9
-    assert mechanics.sqr(-3) == 9
+    assert bridgeparts.sqr(2) == 4
+    assert bridgeparts.sqr(-2) == 4
+    assert bridgeparts.sqr(3) == 9
+    assert bridgeparts.sqr(-3) == 9
 
 
 def createSampleBridge():
-    bridge = mechanics.Bridge()
+    bridge = bridgeparts.Bridge()
 
-    bridge.points.append(mechanics.Joint([0.0, 0.0], stationary=True))
-    bridge.points.append(mechanics.Joint([3.5, 0.0]))
-    bridge.points.append(mechanics.Joint([6.5, 0.0]))
-    bridge.points.append(mechanics.Joint([10.0, 0.0], stationary=True))
-    bridge.points.append(mechanics.Joint([8.0, 2.0]))
-    bridge.points.append(mechanics.Joint([5.0, 2.0]))
-    bridge.points.append(mechanics.Joint([2.0, 2.0]))
-    # bridge.points.append(mechanics.Joint([5.0, 5.0]))
+    bridge.points.append(bridgeparts.Joint([0.0, 0.0], stationary=True))
+    bridge.points.append(bridgeparts.Joint([3.5, 0.0]))
+    bridge.points.append(bridgeparts.Joint([6.5, 0.0]))
+    bridge.points.append(bridgeparts.Joint([10.0, 0.0], stationary=True))
+    bridge.points.append(bridgeparts.Joint([8.0, 2.0]))
+    bridge.points.append(bridgeparts.Joint([5.0, 2.0]))
+    bridge.points.append(bridgeparts.Joint([2.0, 2.0]))
+    # bridge.points.append(bridgeparts.Joint([5.0, 5.0]))
 
     defMaxCompression = 0.9
     defMaxStrech = 1.1
@@ -30,56 +31,56 @@ def createSampleBridge():
 
     # podłoże
     bridge.connections.append(
-        mechanics.Connection(bridge.points[0], bridge.points[1], defMass, defMaxCompression, defCompressionForceRate,
+        bridgeparts.Connection(bridge.points[0], bridge.points[1], defMass, defMaxCompression, defCompressionForceRate,
                              defMaxStrech, defStrechForceRate))
     bridge.connections.append(
-        mechanics.Connection(bridge.points[1], bridge.points[2], defMass, defMaxCompression, defCompressionForceRate,
+        bridgeparts.Connection(bridge.points[1], bridge.points[2], defMass, defMaxCompression, defCompressionForceRate,
                              defMaxStrech, defStrechForceRate))
     bridge.connections.append(
-        mechanics.Connection(bridge.points[2], bridge.points[3], defMass, defMaxCompression, defCompressionForceRate,
+        bridgeparts.Connection(bridge.points[2], bridge.points[3], defMass, defMaxCompression, defCompressionForceRate,
                              defMaxStrech, defStrechForceRate))
 
     # słupki
     bridge.connections.append(
-        mechanics.Connection(bridge.points[0], bridge.points[6], defMass, defMaxCompression, defCompressionForceRate,
+        bridgeparts.Connection(bridge.points[0], bridge.points[6], defMass, defMaxCompression, defCompressionForceRate,
                              defMaxStrech, defStrechForceRate))
     bridge.connections.append(
-        mechanics.Connection(bridge.points[1], bridge.points[6], defMass, defMaxCompression, defCompressionForceRate,
+        bridgeparts.Connection(bridge.points[1], bridge.points[6], defMass, defMaxCompression, defCompressionForceRate,
                              defMaxStrech, defStrechForceRate))
     bridge.connections.append(
-        mechanics.Connection(bridge.points[1], bridge.points[5], defMass, defMaxCompression, defCompressionForceRate,
+        bridgeparts.Connection(bridge.points[1], bridge.points[5], defMass, defMaxCompression, defCompressionForceRate,
                              defMaxStrech, defStrechForceRate))
     bridge.connections.append(
-        mechanics.Connection(bridge.points[2], bridge.points[5], defMass, defMaxCompression, defCompressionForceRate,
+        bridgeparts.Connection(bridge.points[2], bridge.points[5], defMass, defMaxCompression, defCompressionForceRate,
                              defMaxStrech, defStrechForceRate))
     bridge.connections.append(
-        mechanics.Connection(bridge.points[2], bridge.points[4], defMass, defMaxCompression, defCompressionForceRate,
+        bridgeparts.Connection(bridge.points[2], bridge.points[4], defMass, defMaxCompression, defCompressionForceRate,
                              defMaxStrech, defStrechForceRate))
     bridge.connections.append(
-        mechanics.Connection(bridge.points[3], bridge.points[4], defMass, defMaxCompression, defCompressionForceRate,
+        bridgeparts.Connection(bridge.points[3], bridge.points[4], defMass, defMaxCompression, defCompressionForceRate,
                              defMaxStrech, defStrechForceRate))
 
     # górne
-    # bridge.connections.append(mechanics.Connection(bridge.points[6], bridge.points[5], 1, 0, 0, 1.05*defMaxStrech, 1.2*defStrechForceRate))
-    # bridge.connections.append(mechanics.Connection(bridge.points[5], bridge.points[4], 1, 0, 0, 1.05*defMaxStrech, 1.2*defStrechForceRate))
+    # bridge.connections.append(bridgeparts.Connection(bridge.points[6], bridge.points[5], 1, 0, 0, 1.05*defMaxStrech, 1.2*defStrechForceRate))
+    # bridge.connections.append(bridgeparts.Connection(bridge.points[5], bridge.points[4], 1, 0, 0, 1.05*defMaxStrech, 1.2*defStrechForceRate))
     bridge.connections.append(
-        mechanics.Connection(bridge.points[6], bridge.points[5], defMass, defMaxCompression, defCompressionForceRate,
+        bridgeparts.Connection(bridge.points[6], bridge.points[5], defMass, defMaxCompression, defCompressionForceRate,
                              defMaxStrech, defStrechForceRate))
     bridge.connections.append(
-        mechanics.Connection(bridge.points[5], bridge.points[4], defMass, defMaxCompression, defCompressionForceRate,
+        bridgeparts.Connection(bridge.points[5], bridge.points[4], defMass, defMaxCompression, defCompressionForceRate,
                              defMaxStrech, defStrechForceRate))
 
     # huśtawka
-    # bridge.connections.append(mechanics.Connection(bridge.points[6], bridge.points[7], defMass, defMaxCompression, defCompressionForceRate, defMaxStrech, defStrechForceRate))
+    # bridge.connections.append(bridgeparts.Connection(bridge.points[6], bridge.points[7], defMass, defMaxCompression, defCompressionForceRate, defMaxStrech, defStrechForceRate))
 
     return bridge
 
 
 def createSampleBridgePendulum():
-    bridge = mechanics.Bridge()
+    bridge = bridgeparts.Bridge()
 
-    bridge.points.append(mechanics.Joint([0.0, 0.0], stationary=True))
-    bridge.points.append(mechanics.Joint([3.5, 0.0]))
+    bridge.points.append(bridgeparts.Joint([0.0, 0.0], stationary=True))
+    bridge.points.append(bridgeparts.Joint([3.5, 0.0]))
 
     defMaxCompression = 0.9
     defMaxStrech = 1.1
@@ -88,15 +89,15 @@ def createSampleBridgePendulum():
     defMass = 20
 
     bridge.connections.append(
-        mechanics.Connection(bridge.points[0], bridge.points[1], defMass, defMaxCompression, defCompressionForceRate,
+        bridgeparts.Connection(bridge.points[0], bridge.points[1], defMass, defMaxCompression, defCompressionForceRate,
                              defMaxStrech, defStrechForceRate))
 
     return bridge
 
 
 def test_createSampleBridge():
-    assert isinstance(createSampleBridge(), mechanics.Bridge)
-    assert isinstance(createSampleBridgePendulum(), mechanics.Bridge)
+    assert isinstance(createSampleBridge(), bridgeparts.Bridge)
+    assert isinstance(createSampleBridgePendulum(), bridgeparts.Bridge)
 
 
 def test_CopyBridge():
@@ -136,7 +137,7 @@ def test_RenderBridge():
 
 def test_RenderBridge2():
     skip = False
-    trueRender = False
+    trueRender = True
     if skip:
         return
 
