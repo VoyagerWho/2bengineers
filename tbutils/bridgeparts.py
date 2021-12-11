@@ -77,18 +77,27 @@ class Connection:
         self.strechForceRate: float = strechForceRate
         self.length: float = (self.jointA.position - self.jointB.position).length()
         self.broken = False
+        self.cost = 0.0
+        self.material = None
 
     @staticmethod
     def makeCFM(jointA: Joint, jointB: Joint, material):
         """
         makeConnectionFromMaterial
-        :param jointA:
-        :param jointB:
-        :param material:
-        :return:
+        :param jointA: First point of connection
+        :param jointB: Second point of connection
+        :param material: Material used for connection
+        :return: Connection between A and B
         """
-        # to do calculation based on material info
-        return Connection(jointA, jointB, 0, 0, 0)
+        c = Connection(jointA, jointB, 0, 0, 0, 0, 0)
+        c.mass = c.length * material.linDen
+        c.maxCompression = material.maxCom
+        c.compressionForceRate = material.comFR
+        c.maxStretch = material.maxStr
+        c.stretchForceRate = material.strFR
+        c.addCost(c.length * material.cost)
+        c.material = material
+        return c
 
     def getForce(self):  # for jointA / Force jointB = - Force jointA
         v: m2.Vector2 = (self.jointA.position - self.jointB.position)
@@ -114,9 +123,9 @@ class Connection:
             forcesA: float = self.jointA.forces.length()
             forcesB: float = self.jointB.forces.length()
             if self.jointA != None:
-                self.jointA.interia += self.mass / 2  
+                self.jointA.interia += self.mass / 2
             if self.jointB != None:
-                self.jointB.interia += self.mass / 2  
+                self.jointB.interia += self.mass / 2
 
     def getStrain(self):  # do animacji
         if self.broken:
@@ -161,12 +170,21 @@ class Connection:
                         self.maxStrech, self.strechForceRate)
         return (j1, j2, c1, c2)
 
+    def addCost(self, cost: float):
+        self.cost = cost
+
+    def update(self):
+        self.length = (self.jointA.position - self.jointB.position).length()
+        self.mass = self.length * self.material.linDen
+        self.cost = self.length * self.material.cost
+
 
 class Bridge:
 
     def __init__(self):
         self.points = []
         self.connections = []
+        self.materials = []
 
     def copy(self):
         b = Bridge()
@@ -255,3 +273,48 @@ class Bridge:
                          outline=colors[point[2]], width=3, fill=None)
 
         image.save(fileName)
+
+    def updateAll(self):
+        for con in self.connections:
+            con.update()
+
+    def updateOnJoint(self, joint):
+        for con in self.connections:
+            if con.jointA == joint or con.jointB == joint:
+                con.update()
+
+    def getConnectedToJoint(self, joint):
+        return [con for con in self.connections if con.jointA == joint or con.jointB == joint]
+
+
+class Material:
+    """
+    Class representing different connection materials
+    meant to be used like structure no get or set methods
+    and all attributes directly accessible
+    """
+
+    def __init__(self, name: str, maxLength: float, linearDensity: float,
+                 maxCompression: float, compressionForceRate: float,
+                 maxStretch: float, stretchForceRate: float, costPerUnit: float):
+        """
+        Basic method of creating material with its main properties
+        :param name: name of the material
+        :param maxLength: maximum length for connection
+        :param linearDensity: density per unit of measurement
+        :param maxCompression: maximum sustainable compression
+        :param compressionForceRate: transfer rate of the compression force
+        :param maxStretch: maximum sustainable stretch
+        :param stretchForceRate: transfer rate of the stretch force
+        :param costPerUnit: prize of one unit of measurement
+        There is description field to be set if needed
+        """
+        self.name = name
+        self.maxLen = maxLength
+        self.linDen: float = linearDensity
+        self.maxCom: float = maxCompression
+        self.comFR: float = compressionForceRate
+        self.maxStr: float = maxStretch
+        self.strFR: float = stretchForceRate
+        self.cost = costPerUnit
+        self.desc = ""
