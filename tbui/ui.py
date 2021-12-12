@@ -43,7 +43,7 @@ def ui():
     button(text="Click here if you already picked points", bind=stopPickingPoints)
     button(text="Delete points", bind=deletePoints)
 
-    title = "Click and drag the mouse to insert and drag a small sphere."
+    title = "Click and drag the mouse to insert static point."
     scene.title = title
 
     b = box(pos=vector(0, 0, 0), color=color.green)
@@ -55,7 +55,7 @@ def ui():
     def grab(evt):
         if pickingPoints:
             nonlocal s, drag
-            scene.title = 'Drag the sphere.'
+            scene.title = 'Drag the point'
             drag = True
             s = sphere(pos=evt.pos, radius=2, color=color.red)
             staticPoints.append(s)
