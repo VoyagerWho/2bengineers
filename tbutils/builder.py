@@ -137,7 +137,7 @@ class Builder:
                     continue
                 i = i + 1
 
-                if i >= len(hanging) and not change:
+                if not change:
                     hanging = []
                 else:
                     i = 0
