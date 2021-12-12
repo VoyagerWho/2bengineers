@@ -1,3 +1,4 @@
+import math
 """
 This file contains entire definition of neural networks used in ai
 Two main networks:
@@ -11,6 +12,30 @@ class NeuralNetwork:
     """
     Base class for neural networks
     """
+
+    def __init__(self, input_no: int, output_no: int, hidden_structure: list):
+        self.input_no = input_no
+        self.output_no = output_no
+
+    class Neuron:
+        def __init__(self, input_weight, in_bias, value, out_weight):
+            self.input_weight = input_weight
+            self.in_bias = in_bias
+            self.value = value
+            self.out_weight = out_weight
+
+    class NeuronIO:
+        def __init__(self):
+            self.value = 0.0
+
+    @staticmethod
+    def activation(x: float):
+        return 1/(1+math.exp(-x))
+
+    @staticmethod
+    def activation_der(x: float):
+        a = NeuralNetwork.activation(x)
+        return a*(1-a)
 
 
 class JointAnalyzer(NeuralNetwork):

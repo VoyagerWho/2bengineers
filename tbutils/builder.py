@@ -76,8 +76,8 @@ class Builder:
             connectedm = [j for j in roadjoints[1:-2]] + joints
             connecteds = [roadjoints[0], roadjoints[-1]]
             i = 0
-            change = False
             while len(hanging) > 0:
+                change = False
                 dist2 = 1e20  # arbitrary large initial number
                 minj = 0
                 for j in connecteds:
@@ -137,7 +137,7 @@ class Builder:
                     continue
                 i = i + 1
 
-                if i > len(hanging) and not change:
+                if i >= len(hanging) and not change:
                     hanging = []
                 else:
                     i = 0
