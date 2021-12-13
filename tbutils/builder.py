@@ -33,8 +33,6 @@ class Builder:
     def buildInitial(materials, a, b, noStat=0, stat=None):
         """
         Function to create initial procedural solution
-        :param width: width of the board
-        :param height: height of the board
         :param materials: list of the materials[0-road, 1-main, ...]
         :param a: Vector2 beginning of the road
         :param b: Vector2 end of the road
@@ -52,7 +50,7 @@ class Builder:
         roadperpen = m2.Vector2(-roadpararel[1], roadpararel[0]).normal()
         roadjoints = [Joint(a, True)] \
                      + [Joint(a + roadpararel * i + roadperpen * (20 * math.sin(i * math.pi / noroad)))
-                        for i in range(1, noroad+1)]
+                        for i in range(1, noroad + 1)]
         roadjoints.append(Joint(b, True))
 
         length = 0.7 * materials[1].maxLen
@@ -100,7 +98,8 @@ class Builder:
                     mainbeams.append(Connection.makeCFM(minj, connectedm[-2], materials[1]))
                     mainbeams.append(Connection.makeCFM(minj, connectedm[-1], materials[1]))
 
-                    hanging.pop(0)
+                    hanging.pop(i)
+                    i = 0
                     change = True
                     continue
 
@@ -116,7 +115,8 @@ class Builder:
                 if dist2 < (0.9 * materials[1].maxLen) ** 2:
                     connecteds.append(Joint(hanging[i], True))
                     mainbeams.append(Connection.makeCFM(connecteds[-1], minj, materials[1]))
-                    hanging.pop(0)
+                    hanging.pop(i)
+                    i = 0
                     change = True
                     continue
                 elif (dist2 >= (0.9 * materials[1].maxLen) ** 2) and (dist2 < (1.9 * materials[1].maxLen) ** 2):
@@ -124,15 +124,16 @@ class Builder:
                     dist = math.sqrt(dist2)
                     ratio = min(0.5 * dist * math.sin(math.pi / 3), 0.45 * materials[1].maxLen)
                     ortnorm = m2.Vector2(-vec[1], vec[0]).normal() * ratio
-                    connectedm.append(minj.position + vec * 0.5 + ortnorm)
-                    connectedm.append(minj.position + vec * 0.5 - ortnorm)
+                    connectedm.append(Joint(minj.position + vec * 0.5 + ortnorm))
+                    connectedm.append(Joint(minj.position + vec * 0.5 - ortnorm))
                     connecteds.append(Joint(hanging[i], True))
                     mainbeams.append(Connection.makeCFM(connecteds[-1], connectedm[-2], materials[1]))
                     mainbeams.append(Connection.makeCFM(connecteds[-1], connectedm[-1], materials[1]))
                     mainbeams.append(Connection.makeCFM(minj, connectedm[-2], materials[1]))
                     mainbeams.append(Connection.makeCFM(minj, connectedm[-1], materials[1]))
                     mainbeams.append(Connection.makeCFM(connectedm[-2], connectedm[-1], materials[1]))
-                    hanging.pop(0)
+                    hanging.pop(i)
+                    i = 0
                     change = True
                     continue
                 i = i + 1
