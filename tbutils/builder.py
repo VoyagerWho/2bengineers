@@ -136,10 +136,12 @@ class Builder:
                     change = True
                     continue
                 i = i + 1
-
-                if not change:
-                    hanging = []
-                else:
+                print(i, change, hanging)
+                if i >= len(hanging):
+                    if not change:
+                        for v in hanging:
+                            connecteds.append(Joint(v, True))
+                        hanging = []
                     i = 0
             joints = connecteds + connectedm
         else:

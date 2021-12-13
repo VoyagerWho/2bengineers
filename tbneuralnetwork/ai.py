@@ -1,44 +1,18 @@
-import math
 """
-This file contains entire definition of neural networks used in ai
+This file contains definition of neural networks used in ai
 Two main networks:
     one to work on joints
     second to work on connection
-packed in one bridge evolver
 """
+from __future__ import print_function
+import math
+import os
+import neat
+import tbsymulator.mechanics as sim
+from tbutils.bridgeparts import Bridge
+import tbneuralnetwork.nueralnetworkfunctions as nnf
 
-
-class NeuralNetwork:
-    """
-    Base class for neural networks
-    """
-
-    def __init__(self, input_no: int, output_no: int, hidden_structure: list):
-        self.input_no = input_no
-        self.output_no = output_no
-
-    class Neuron:
-        def __init__(self, input_weight, in_bias, value, out_weight):
-            self.input_weight = input_weight
-            self.in_bias = in_bias
-            self.value = value
-            self.out_weight = out_weight
-
-    class NeuronIO:
-        def __init__(self):
-            self.value = 0.0
-
-    @staticmethod
-    def activation(x: float):
-        return 1/(1+math.exp(-x))
-
-    @staticmethod
-    def activation_der(x: float):
-        a = NeuralNetwork.activation(x)
-        return a*(1-a)
-
-
-class JointAnalyzer(NeuralNetwork):
+class JointAnalyzer:
     """
     NN performing modifications on bridge joints
     Structure:
@@ -61,7 +35,7 @@ class JointAnalyzer(NeuralNetwork):
     """
 
 
-class ConnectionAnalyzer(NeuralNetwork):
+class ConnectionAnalyzer:
     """
     NN performing modifications on bridge connection
     Structure:
@@ -82,7 +56,201 @@ class ConnectionAnalyzer(NeuralNetwork):
     """
 
 
-class BridgeEvolver:
+class BridgeEvolution:
     """
-    Main class handling evolution of the bridge
+    Main class for evolving the bridge structure
     """
+
+    def __init__(self, path_to_catalog):
+        config_path_joint = os.path.join(path_to_catalog, 'config-feedforward-joint')
+        config_path_connection = os.path.join(path_to_catalog, 'config-feedforward-connection')
+        self.config_j = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
+                                    neat.DefaultSpeciesSet, neat.DefaultStagnation,
+                                    config_path_joint)
+
+        self.config_c = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
+                                    neat.DefaultSpeciesSet, neat.DefaultStagnation,
+                                    config_path_connection)
+
+        # Create the population, which is the top-level object for a NEAT run.
+        self.p_j = neat.Population(self.config_j)
+        self.p_c = neat.Population(self.config_c)
+
+        self.winner_j = None
+        self.winner_c = None
+
+    def set_reporter(self):
+        self.p_j.add_reporter(neat.StdOutReporter(True))
+        stats_j = neat.StatisticsReporter()
+        self.p_j.add_reporter(stats_j)
+
+        self.p_c.add_reporter(neat.StdOutReporter(True))
+        stats_c = neat.StatisticsReporter()
+        self.p_c.add_reporter(stats_c)
+
+    def train(self, no_generations: int):
+        # Run for up to 300 generations.
+        pe_j = neat.ParallelEvaluator(4, eval_genome_j)
+        pe_c = neat.ParallelEvaluator(4, eval_genome_c)
+        self.winner_j = self.p_j.run(pe_j.evaluate, no_generations)
+        self.winner_c = self.p_c.run(pe_c.evaluate, no_generations)
+
+        # Display the winning genome.
+        print('\nBest genome:\n{!s}'.format(self.winner_j))
+
+        # Show output of the most fit genome against training data.
+        print('\nOutput:')
+        winner_net = neat.nn.FeedForwardNetwork.create(self.winner_j, self.config_j)
+        for xi, xo in zip(inputs_j, outputs_j):
+            output = winner_net.activate(xi)
+            print("input {!r}, expected output {!r}, got {!r}".format(xi, xo, output))
+
+        # Display the winning genome.
+        print('\nBest genome:\n{!s}'.format(self.winner_c))
+
+        # Show output of the most fit genome against training data.
+        print('\nOutput:')
+        winner_net = neat.nn.FeedForwardNetwork.create(self.winner_c, self.config_c)
+        for xi, xo in zip(inputs_c, outputs_c):
+            output = winner_net.activate(xi)
+            print("input {!r}, expected output {!r}, got {!r}".format(xi, xo, output))
+
+
+inputs_j = []
+outputs_j = []
+
+inputs_c = []
+outputs_c = []
+
+bridge: Bridge = None
+
+
+def create_inputs_j():
+    inputs_j.clear()
+    [simulation_time, strain, break_moments] = sim.simulate(bridge)
+    strain_min = min(min(s for s in strain))
+    strain_max = max(max(s for s in strain))
+    def f(x): (x - strain_min) / (strain_max - strain_max)
+    for i, j in enumerate(bridge.points):
+        indexes = [bridge.connections.index(con) for con in bridge.getConnectedToJoint(j)]
+        strain_con = [strain[idx] for idx in indexes]
+        inputs_j[i] = ((1.0 if j.isStationary else 0.0), f(min(strain_con)),
+                       f(max(strain_con)), f(sum(strain_con) / len(strain_con)),
+                       len(strain_con))
+
+    return simulation_time, strain, break_moments
+
+
+def alter_bridge_j(commands):
+    my_bridge = bridge.copy()
+    mj = []
+    rj = []
+    aj = []
+    ac = []
+    for args in commands:
+        if args[0] > 0.75:
+            mj.append((args[-2], args[-1]))
+        if args[1] > 0.75:
+            rj.append((args[-2], args[-1]))
+        if args[2] > 0.75:
+            aj.append((args[-2], args[-1]))
+        if args[3] > 0.75:
+            ac.append((args[-2], args[-1]))
+    for c in mj:
+        nnf.moveJoint(bridge, c[0], c[1])
+    for c in rj:
+        nnf.removeJoint(bridge, c[0], c[1])
+    for c in aj:
+        nnf.addJoint(bridge, c[0], c[1])
+    for c in ac:
+        nnf.addConnection(bridge, c[0], c[1])
+
+    return sim.simulate(my_bridge), sum(con.cost for con in my_bridge.connections)
+
+
+def eval_genome_j(genome, config):
+    """
+    Scoring function for ai joint
+    :param genome: single genome
+    :param config: genome class configuration data
+    :return: float genome's fitness
+    """
+    [s_t1, strain_1, _] = create_inputs_j()
+    net = neat.nn.FeedForwardNetwork.create(genome, config)
+    output = []
+    for xi in inputs_j:
+        output.append(net.activate(xi))
+    [[s_t2, strain_2, _], cost_2] = alter_bridge_j(output)
+
+    dt = math.fabs((s_t2 - s_t1)/s_t1 if s_t1 > 0 else 0)
+    s1 = sum(sum(s) for s in strain_1)
+    s2 = sum(sum(s) for s in strain_2)
+    ds = math.fabs((s2 - s1)/s1 if s1 > 0 else 0)
+    cost_1 = sum(con.cost for con in bridge.connections)
+    dc = math.fabs((cost_2 - cost_1)/cost_1 if cost_1 > 0 else 0)
+    return (5 / (dt + 1) + 3 / (ds + 1) + 2 / (dc + 1)) / 10
+
+
+def create_inputs_c():
+    inputs_c.clear()
+    [simulation_time, strain, break_moments] = sim.simulate(bridge)
+    strain_min = min(min(s for s in strain))
+    strain_max = max(max(s for s in strain))
+    def f(x): (x - strain_min) / (strain_max - strain_max)
+    for i, con in enumerate(bridge.connections):
+        idx = bridge.materials.index(con.material) / len(bridge.materials)
+        inputs_c[i] = (idx, f(min(strain[i])),
+                       f(max(strain[i])), f(sum(strain[i])/len(strain[i])),
+                       break_moments[i]/simulation_time)
+
+    return simulation_time, strain, break_moments
+
+
+def alter_bridge_c(commands):
+    my_bridge = bridge.copy()
+    cm = []
+    rc = []
+    for args in commands:
+        if args[0] > 0.75:
+            cm.append(args[-1])
+        if args[1] > 0.75:
+            rc.append(args[-1])
+    for c in cm:
+        nnf.changeConnectionMaterial(bridge, c[0])
+    for c in rc:
+        nnf.removeConnection(bridge, c[0])
+
+    return sim.simulate(my_bridge), sum(con.cost for con in my_bridge.connections)
+
+
+def eval_genome_c(genome, config):
+    """
+    Scoring function for ai connection
+    :param genome: single genome
+    :param config: genome class configuration data
+    :return: float genome's fitness
+    """
+    [s_t1, strain_1, _] = create_inputs_c()
+    net = neat.nn.FeedForwardNetwork.create(genome, config)
+    output = []
+    for xi in inputs_c:
+        output.append(net.activate(xi))
+    [[s_t2, strain_2, _], cost_2] = alter_bridge_c(output)
+
+    dt = math.fabs((s_t2 - s_t1) / s_t1 if s_t1 > 0 else 0)
+    s1 = sum(sum(s) for s in strain_1)
+    s2 = sum(sum(s) for s in strain_2)
+    ds = math.fabs((s2 - s1) / s1 if s1 > 0 else 0)
+    cost_1 = sum(con.cost for con in bridge.connections)
+    dc = math.fabs((cost_2 - cost_1) / cost_1 if cost_1 > 0 else 0)
+    return (5 / (dt + 1) + 3 / (ds + 1) + 2 / (dc + 1)) / 10
+
+
+if __name__ == '__main__':
+    # Determine path to configuration file. This path manipulation is
+    # here so that the script will run successfully regardless of the
+    # current working directory.
+    local_dir = os.path.dirname(__file__)
+    chamber = BridgeEvolution(local_dir)
+    chamber.set_reporter()
+    chamber.train(400)
