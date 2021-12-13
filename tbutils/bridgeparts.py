@@ -254,14 +254,16 @@ class Bridge:
 
         return lines, points
 
-    def render(self, fileName: str, width: int = 640, height: int = 480, bounds: float = 1.3):
+    def render(self, fileName: str, width: int = 640, height: int = 480, bounds: float = 1.3, model = None):
 
         from PIL import Image, ImageDraw
 
         image = Image.new("RGB", (width, height), "white")
         draw = ImageDraw.Draw(image)
 
-        model = self.getModelForRender((width, height), bounds)
+        if model == None:
+            model = self.getModelForRender((width, height), bounds)
+            
         for line in model[0]:
             draw.line([(line[0], height - line[1] - 1), (line[2], height - line[3] - 1)], width=5,
                       fill=(int(255 * line[4]) + int(255 - 255 * line[4]) * 256), joint="curve")
