@@ -2,6 +2,7 @@ import tbsymulator.mechanics as mechanics
 import tbutils.bridgeparts as bridgeparts
 import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw
+from time import sleep
 
 
 def test_sqr():
@@ -239,3 +240,23 @@ def test_simulation():
         ax2.plot(timeValues, VValues, ls='-', color='y', lw=1, label='Velocity');
         fig.legend()
         fig.savefig("StrainVsVelocity.png")
+
+
+
+def test_AsyncRenderBridge2():
+    skip = False 
+    trueRender = True
+    if skip:
+        return
+
+    bridge = createSampleBridge()
+
+    simulation = mechanics.SimulationThread(bridge, timeStep = 1e-6, tol=1e-3, resistance=0.5, realBrakes=True, toleranceCountDependent=True)
+    simulation.start()
+    while simulation.time < 5:
+        print("Async t =", simulation.time)
+        sleep(0.4)
+    
+    simulation.stopSimulation()
+    
+    print("done")
