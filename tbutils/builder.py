@@ -165,5 +165,7 @@ class Builder:
         bridge = Bridge()
         bridge.points = joints
         bridge.connections = beams
+        for con in bridge.connections:
+            assert con.maxStretch != 0 and con.stretchForceRate != 0 
         bridge.materials = materials
         return bridge

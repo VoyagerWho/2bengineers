@@ -68,18 +68,24 @@ class Joint:
 class Connection:
 
     def __init__(self, jointA: Joint, jointB: Joint, mass: float, maxCompression: float, compressionForceRate: float,
-                 maxStrech: float, strechForceRate: float):
+                 maxStretch: float, stretchForceRate: float):
         self.jointA: Joint = jointA
         self.jointB: Joint = jointB
         self.mass: float = mass
         self.maxCompression: float = maxCompression
         self.compressionForceRate: float = compressionForceRate
-        self.maxStrech: float = maxStrech
-        self.strechForceRate: float = strechForceRate
-        self.length: float = (self.jointA.position - self.jointB.position).length()
+        self.maxStretch: float = maxStretch
+        self.stretchForceRate: float = stretchForceRate
+        self.updateLength()
         self.broken = False
         self.cost = 0.0
         self.material = None
+        
+    def __str__(self):
+        return "Joints: [" + str(self.jointA) + ", " + str(self.jointB) + "]\tMass=" + str(self.mass) + "\tMaxCompression=" + str(self.maxCompression) + "\tCompressionForceRate=" + str(self.compressionForceRate) + "\tMaxStretch=" + str(self.maxStretch) + "\tStretchForceRate=" + str(self.stretchForceRate) + "\tBroken: " + str(self.broken)
+        
+    def updateLength(self):        
+        self.length: float = (self.jointA.position - self.jointB.position).length()
 
     @staticmethod
     def makeCFM(jointA: Joint, jointB: Joint, material):
@@ -90,12 +96,8 @@ class Connection:
         :param material: Material used for connection
         :return: Connection between A and B
         """
-        c = Connection(jointA, jointB, 0, 0, 0, 0, 0)
+        c = Connection(jointA, jointB, 0, material.maxCom, material.comFR, material.maxStr, material.strFR)
         c.mass = c.length * material.linDen
-        c.maxCompression = material.maxCom
-        c.compressionForceRate = material.comFR
-        c.maxStretch = material.maxStr
-        c.stretchForceRate = material.strFR
         c.addCost(c.length * material.cost)
         c.material = material
         return c
@@ -106,7 +108,7 @@ class Connection:
         if currentLength < self.length:
             return v.normal() * (-self.compressionForceRate * (currentLength - self.length))
         if currentLength > self.length:
-            return v.normal() * (-self.strechForceRate * (currentLength - self.length))
+            return v.normal() * (-self.stretchForceRate * (currentLength - self.length))
         return m2.Vector2()
 
     def addForces(self, gravity: m2.Vector2 = m2.Vector2()):
@@ -118,7 +120,7 @@ class Connection:
             if self.jointB != None:
                 self.jointB.forces += gm - forces
 
-    def addInteria(self):
+    def addIntertia(self):
         if not self.broken:
             v: m2.Vector2 = (self.jointA.position - self.jointB.position)
             forcesA: float = self.jointA.forces.length()
@@ -140,8 +142,8 @@ class Connection:
         if currentLength > self.length and inStrongRange(self.maxCompression, 0, 1):
             return min(1.0, abs((currentLength - self.length) / self.length / (self.maxCompression - 1)))
 
-        elif currentLength < self.length and self.maxStrech > 1:
-            return min(1.0, abs((currentLength - self.length) / self.length / (self.maxStrech - 1)))
+        elif currentLength < self.length and self.maxStretch > 1:
+            return min(1.0, abs((currentLength - self.length) / self.length / (self.maxStretch - 1)))
 
         return 0
 
@@ -151,13 +153,13 @@ class Connection:
             currentLength: float = v.length()
             if currentLength < self.length * self.maxCompression:
                 self.broken = True
-            if currentLength > self.length * self.maxStrech:
+            if currentLength > self.length * self.maxStretch:
                 self.broken = True
         return self.broken
 
     def copy(self):
-        c = Connection(self.jointA, self.jointB, self.mass, self.maxCompression, self.compressionForceRate,
-                       self.maxStrech, self.strechForceRate)
+        c = Connection(jointA = self.jointA, jointB = self.jointB, mass = self.mass, maxCompression = self.maxCompression, compressionForceRate = self.compressionForceRate,
+                       maxStretch = self.maxStretch, stretchForceRate = self.stretchForceRate)
         c.broken = self.broken
         c.material = self.material
         return c
@@ -167,9 +169,9 @@ class Connection:
         j1.velocity = self.jointA.velocity * where + self.jointB.velocity * (1 - where)
         j2 = j1.copy()
         c1 = Connection(self.jointA, j1, self.mass * where, self.maxCompression, self.compressionForceRate,
-                        self.maxStrech, self.strechForceRate)
+                        self.maxStretch, self.stretchForceRate)
         c2 = Connection(j2, self.jointB, self.mass * (1.0 - where), self.maxCompression, self.compressionForceRate,
-                        self.maxStrech, self.strechForceRate)
+                        self.maxStretch, self.stretchForceRate)
         return (j1, j2, c1, c2)
 
     def addCost(self, cost: float):
