@@ -75,10 +75,13 @@ class Connection:
         self.compressionForceRate: float = compressionForceRate
         self.maxStrech: float = maxStrech
         self.strechForceRate: float = strechForceRate
-        self.length: float = (self.jointA.position - self.jointB.position).length()
+        self.updateLength()
         self.broken = False
         self.cost = 0.0
         self.material = None
+        
+    def updateLength(self):        
+        self.length: float = (self.jointA.position - self.jointB.position).length()
 
     @staticmethod
     def makeCFM(jointA: Joint, jointB: Joint, material):
