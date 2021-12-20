@@ -1,28 +1,31 @@
 from tbutils.builder import Builder
 import tbutils.math2d as m2
-from tbutils.bridgeparts import Joint, Connection
+from tbutils.bridgeparts import Joint, Connection, Bridge
 import tbneuralnetwork.nueralnetworkfunctions as nnf
 import tbneuralnetwork.ai as ai
 import os
+from tbsymulator.mechanics import SimulationThread
 
 materials = Builder.createMaterialsList()
-stat = [m2.Vector2(30.0, 300.0), m2.Vector2(100.0, 230.0),
-        m2.Vector2(100.0, 210.0), m2.Vector2(200.0, 700.0), m2.Vector2(300.0, 400.0)]
-bridge = Builder.buildInitial(materials, m2.Vector2(100.0, 300.0), m2.Vector2(700.0, 400.0), 3, stat)
+stat = [m2.Vector2(100.0, 250.0), m2.Vector2(500.0, 250.0), ]
+bridge = Builder.buildInitial(materials, m2.Vector2(100.0, 300.0), m2.Vector2(500.0, 300.0), 1, stat)
 
-print(nnf.changeConnectionMaterial(bridge, 10, 0.1))
+print([f'{con.length:0.4f}' for con in bridge.connections])
 
-print(nnf.removeConnection(bridge, 7, 0.3))
+bridge.render("Default.png", 600, 600)
 
-print(nnf.removeJoint(bridge, 8, 0.3, 0.6))
+print(bridge.getModelForRender())
 
-print(nnf.addJoint(bridge, 10, 0.5, 0.1))
+simulation = SimulationThread(bridge, makeAnimation=True)
 
-print(nnf.moveJoint(bridge, 15, 0.3, 0.6))
-
-print(nnf.addConnection(bridge, 3, 0.9, 0.3))
-
-bridge.render("Default.png", 800, 600)
+simulation.start()
+while simulation.running and simulation.time < 1.0:
+    print(f'{simulation.timeStep:0.6f}\t{simulation.maxSpeed():0.6f}\t{simulation.maxSpeedv2():0.6f}')
+    if simulation.isBroken():
+        simulation.stopSimulation()
+simulation.stopSimulation()
+for frame in simulation.animation:
+    print(frame)
 
 if __name__ == '__main__' and False:
     ai.bridge = bridge

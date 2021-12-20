@@ -14,19 +14,32 @@ class Builder:
         Method to initialize list of starting materials
         :return: list of materials
         """
-        materials = [Material(
-            "Asphalt Road", 100.0, 10.0,
-            50.0, 5.0,
-            50.0, 5.0, 20.0
-        ),
+        """
+        defMaxCompression = 0.9
+        defMaxStrech = 1.1
+        defCompressionForceRate = 1e4
+        defStrechForceRate = 1e4
+        """
+        materials = [
             Material(
-                "Steel Beam", 150.0, 25.0,
-                75.0, 5.0,
-                75.0, 5.0, 40.0
+                "Asphalt Road", 100.0, 0.1,
+                0.9, 1e4,
+                1.1, 1e4, 20.0
+            ),
+            Material(
+                "Steel Beam", 150.0, 0.2,
+                0.9, 1e4,
+                1.1, 1e4, 20.0
+            ),
+            Material(
+                "Wooden Beam", 75.0, 0.1,
+                0.9, 1e4,
+                1.1, 1e4, 20.0
             ),
         ]
         materials[0].desc = "Material for roads (required)"
         materials[1].desc = "Basic support structure material"
+        materials[2].desc = "Second support material"
         return materials
 
     @staticmethod
@@ -50,7 +63,7 @@ class Builder:
         roadperpen = m2.Vector2(-roadpararel[1], roadpararel[0]).normal()
         roadjoints = [Joint(a, True)] \
                      + [Joint(a + roadpararel * i + roadperpen * (20 * math.sin(i * math.pi / noroad)))
-                        for i in range(1, noroad + 1)]
+                        for i in range(1, noroad)]
         roadjoints.append(Joint(b, True))
 
         length = 0.7 * materials[1].maxLen
@@ -62,16 +75,18 @@ class Builder:
             ortroadvec = m2.Vector2(-roadvec[1], roadvec[0]) * ratio
             joints[i] = Joint(roadjoints[i].position + roadvec * 0.5 + ortroadvec)
             roads[i] = Connection.makeCFM(roadjoints[i], roadjoints[i + 1], materials[0])
-        mainbeams = [0 for _ in range(3 * noroad - 1)]
+        beams = [0 for _ in range(3 * noroad - 1)]
         for i in range(noroad):
-            mainbeams[3 * i - 2] = Connection.makeCFM(roadjoints[i], joints[i], materials[1])
-            mainbeams[3 * i - 1] = Connection.makeCFM(roadjoints[i + 1], joints[i], materials[1])
+            beams[3 * i - 2] = Connection.makeCFM(roadjoints[i], joints[i], materials[1])
+            beams[3 * i - 1] = Connection.makeCFM(roadjoints[i + 1], joints[i], materials[1])
             if i < noroad - 1:
-                mainbeams[3 * i] = Connection.makeCFM(joints[i], joints[i + 1], materials[1])
-        mainbeams = roads + mainbeams
+                beams[3 * i] = Connection.makeCFM(joints[i], joints[i + 1], materials[1])
+        beams = roads + beams
+
+        # handling of additional stationary points
         if noStat > 0:
             hanging = [j for j in stat]
-            connectedm = [j for j in roadjoints[1:-2]] + joints
+            connectedm = [j for j in roadjoints[1:-1]] + joints
             connecteds = [roadjoints[0], roadjoints[-1]]
             i = 0
             while len(hanging) > 0:
@@ -88,15 +103,15 @@ class Builder:
                 if dist2 < (1.5 * materials[1].maxLen) ** 2:
                     vec = hanging[i] - minj.position
                     dist = math.sqrt(dist2)
-                    ratio = dist * math.sin(math.pi / 3)
+                    ratio = 0.5 * dist * 0.5  # math.sin(math.pi / 6)
                     ortnorm = m2.Vector2(-vec[1], vec[0]).normal() * ratio
                     connectedm.append(Joint(minj.position + vec * 0.5 + ortnorm))
                     connectedm.append(Joint(minj.position + vec * 0.5 - ortnorm))
                     connecteds.append(Joint(hanging[i], True))
-                    mainbeams.append(Connection.makeCFM(connecteds[-1], connectedm[-2], materials[1]))
-                    mainbeams.append(Connection.makeCFM(connecteds[-1], connectedm[-1], materials[1]))
-                    mainbeams.append(Connection.makeCFM(minj, connectedm[-2], materials[1]))
-                    mainbeams.append(Connection.makeCFM(minj, connectedm[-1], materials[1]))
+                    beams.append(Connection.makeCFM(connecteds[-1], connectedm[-2], materials[1]))
+                    beams.append(Connection.makeCFM(connecteds[-1], connectedm[-1], materials[1]))
+                    beams.append(Connection.makeCFM(minj, connectedm[-2], materials[1]))
+                    beams.append(Connection.makeCFM(minj, connectedm[-1], materials[1]))
 
                     hanging.pop(i)
                     i = 0
@@ -114,7 +129,7 @@ class Builder:
 
                 if dist2 < (0.9 * materials[1].maxLen) ** 2:
                     connecteds.append(Joint(hanging[i], True))
-                    mainbeams.append(Connection.makeCFM(connecteds[-1], minj, materials[1]))
+                    beams.append(Connection.makeCFM(connecteds[-1], minj, materials[1]))
                     hanging.pop(i)
                     i = 0
                     change = True
@@ -122,16 +137,16 @@ class Builder:
                 elif (dist2 >= (0.9 * materials[1].maxLen) ** 2) and (dist2 < (1.9 * materials[1].maxLen) ** 2):
                     vec = hanging[i] - minj.position
                     dist = math.sqrt(dist2)
-                    ratio = min(0.5 * dist * math.sin(math.pi / 3), 0.45 * materials[1].maxLen)
+                    ratio = min(0.5 * dist * math.sin(math.pi / 3), 0.3 * materials[1].maxLen)
                     ortnorm = m2.Vector2(-vec[1], vec[0]).normal() * ratio
                     connectedm.append(Joint(minj.position + vec * 0.5 + ortnorm))
                     connectedm.append(Joint(minj.position + vec * 0.5 - ortnorm))
                     connecteds.append(Joint(hanging[i], True))
-                    mainbeams.append(Connection.makeCFM(connecteds[-1], connectedm[-2], materials[1]))
-                    mainbeams.append(Connection.makeCFM(connecteds[-1], connectedm[-1], materials[1]))
-                    mainbeams.append(Connection.makeCFM(minj, connectedm[-2], materials[1]))
-                    mainbeams.append(Connection.makeCFM(minj, connectedm[-1], materials[1]))
-                    mainbeams.append(Connection.makeCFM(connectedm[-2], connectedm[-1], materials[1]))
+                    beams.append(Connection.makeCFM(connecteds[-1], connectedm[-2], materials[1]))
+                    beams.append(Connection.makeCFM(connecteds[-1], connectedm[-1], materials[1]))
+                    beams.append(Connection.makeCFM(minj, connectedm[-2], materials[1]))
+                    beams.append(Connection.makeCFM(minj, connectedm[-1], materials[1]))
+                    beams.append(Connection.makeCFM(connectedm[-2], connectedm[-1], materials[1]))
                     hanging.pop(i)
                     i = 0
                     change = True
@@ -146,9 +161,9 @@ class Builder:
                     i = 0
             joints = connecteds + connectedm
         else:
-            joints = roadjoints
+            joints = roadjoints + joints
         bridge = Bridge()
         bridge.points = joints
-        bridge.connections = mainbeams
+        bridge.connections = beams
         bridge.materials = materials
         return bridge

@@ -123,7 +123,9 @@ inputs_c = []
 outputs_c = []
 
 bridge: Bridge = None
-
+simulation_time = 0.0
+strain = 0.0
+break_moments = 0.0
 
 def create_inputs_j():
     inputs_j.clear()
@@ -147,23 +149,24 @@ def alter_bridge_j(commands):
     rj = []
     aj = []
     ac = []
-    for args in commands:
+    for i, args in enumerate(commands):
+        val = (i, args[-2], args[-1], )
         if args[0] > 0.75:
-            mj.append((args[-2], args[-1]))
+            mj.append(val)
         if args[1] > 0.75:
-            rj.append((args[-2], args[-1]))
+            rj.append(val)
         if args[2] > 0.75:
-            aj.append((args[-2], args[-1]))
+            aj.append(val)
         if args[3] > 0.75:
-            ac.append((args[-2], args[-1]))
+            ac.append(val)
     for c in mj:
-        nnf.moveJoint(bridge, c[0], c[1])
-    for c in rj:
-        nnf.removeJoint(bridge, c[0], c[1])
+        nnf.moveJoint(bridge, c[0], c[1], c[2])
     for c in aj:
-        nnf.addJoint(bridge, c[0], c[1])
+        nnf.addJoint(bridge, c[0], c[1], c[2])
     for c in ac:
-        nnf.addConnection(bridge, c[0], c[1])
+        nnf.addConnection(bridge, c[0], c[1], c[2])
+    for c in rj:
+        nnf.removeJoint(bridge, c[0], c[1], c[2])
 
     return sim.simulate(my_bridge), sum(con.cost for con in my_bridge.connections)
 
@@ -210,11 +213,12 @@ def alter_bridge_c(commands):
     my_bridge = bridge.copy()
     cm = []
     rc = []
-    for args in commands:
+    for i, args in enumerate(commands):
+        val = (i, args[-1], )
         if args[0] > 0.75:
-            cm.append(args[-1])
+            cm.append(val)
         if args[1] > 0.75:
-            rc.append(args[-1])
+            rc.append(val)
     for c in cm:
         nnf.changeConnectionMaterial(bridge, c[0])
     for c in rc:

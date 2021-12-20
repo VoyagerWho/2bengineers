@@ -75,10 +75,10 @@ def simulateTimeStep(bridge, timeStep: float = 1e-6, gravity: m2.Vector2 = m2.Ve
 
 
 class SimulationThread(Thread):
-    
+
     def __init__(self, bridge, timeStep: float = 1e-6, gravity: m2.Vector2 = m2.Vector2(0, -9.81),
-                resistance: float = 1e-3, tol: float = 1e-3, realBrakes: bool = False,
-                toleranceCountDependent: bool = False, safeBreaking: bool = False, makeAnimation : bool = False):
+                 resistance: float = 1e-3, tol: float = 1e-3, realBrakes: bool = False,
+                 toleranceCountDependent: bool = False, safeBreaking: bool = False, makeAnimation: bool = False):
         self.bridge = bridge
         self.timeStep = timeStep
         self.gravity = gravity
@@ -87,47 +87,51 @@ class SimulationThread(Thread):
         self.realBrakes = realBrakes
         self.toleranceCountDependent = toleranceCountDependent
         self.safeBreaking = safeBreaking
-        
-        self.time : float = 0
+
+        self.time: float = 0
         self.running = True
         self.pause = False
         self.makeAnimation = makeAnimation
         self.animation = []
         self.exceptions = []
         Thread.__init__(self)
-        
+
     def run(self):
         while self.running:
+            print(f'Inside: {self.timeStep:0.6f}\t{self.maxSpeed():0.6f}\t{self.maxSpeedv2():0.6f}')
             try:
-                self.timeStep = simulateTimeStep(bridge = self.bridge, timeStep = self.timeStep, gravity = self.gravity, resistance = self.resistance, tol = self.tol, realBrakes = self.realBrakes, toleranceCountDependent = self.toleranceCountDependent, safeBreaking = self.safeBreaking)
+                self.timeStep = simulateTimeStep(bridge=self.bridge, timeStep=self.timeStep, gravity=self.gravity,
+                                                 resistance=self.resistance, tol=self.tol, realBrakes=self.realBrakes,
+                                                 toleranceCountDependent=self.toleranceCountDependent,
+                                                 safeBreaking=self.safeBreaking)
                 if self.makeAnimation:
-                    self.animation.append((time, self.bridge.getModelForRender()))         
+                    self.animation.append((self.time, self.bridge.getModelForRender()))
             except Exception as error:
                 self.exceptions.append(error)
                 self.pause = True
-            
-            self.time += self.timeStep            
+
+            self.time += self.timeStep
             while self.running and self.pause:
                 sleep(0.001)
-                
-                
-        
+
     def isBroken(self):
         for connection in self.bridge.connections:
             if connection.broken:
                 return True
         return False
-    
+
     def stopSimulation(self):
         self.pause = False
         self.running = False
         self.join()
-        
+
     def maxSpeed(self):
-        maxV : float = 0
+        maxV: float = 0
         for joint in self.bridge.points:
             v = joint.velocity.length()
             if v > maxV:
                 maxV = v
         return maxV
-        
+
+    def maxSpeedv2(self):
+        return max(joint.velocity.length() for joint in self.bridge.points)

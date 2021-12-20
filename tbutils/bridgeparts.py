@@ -21,11 +21,12 @@ class Joint:
         self.forces: m2.Vector2 = m2.Vector2()
         self.isStationary: bool = stationary
         self.velocity: m2.Vector2 = m2.Vector2()
-        self.interia: float = 0
+        self.inertia: float = 0
+        self.indexOnBridge: int = 0
 
     def move(self, time: float, resistance: float):
-        if (not self.isStationary) and (self.interia != 0):
-            dv: m2.Vector2 = self.forces * (time / self.interia)
+        if (not self.isStationary) and (self.inertia != 0):
+            dv: m2.Vector2 = self.forces * (time / self.inertia)
             self.position += self.velocity * time + dv * (time / 2)
             self.velocity += dv
             self.velocity *= exp(-time * resistance)
@@ -33,14 +34,14 @@ class Joint:
 
     def prepare(self):
         self.forces = m2.Vector2()
-        self.interia = 0.0
+        self.inertia = 0.0
 
     def assign(self, j):
         self.position = j.position.copy()
         self.forces = j.forces.copy()
         self.isStationary = j.isStationary
         self.velocity = j.velocity.copy()
-        self.interia = j.interia
+        self.inertia = j.inertia
 
     def copy(self):
         c = Joint(self.position)
@@ -61,7 +62,7 @@ class Joint:
 
     def __str__(self):
         return "Position = " + str(self.position) + "\tVelocity = " + str(self.velocity) + "\tForces = " + str(
-            self.forces) + "\tInteria = " + str(self.interia) + "\tIsStationary = " + str(self.isStationary)
+            self.forces) + "\tInertia = " + str(self.inertia) + "\tIsStationary = " + str(self.isStationary)
 
 
 class Connection:
@@ -123,9 +124,9 @@ class Connection:
             forcesA: float = self.jointA.forces.length()
             forcesB: float = self.jointB.forces.length()
             if self.jointA != None:
-                self.jointA.interia += self.mass / 2
+                self.jointA.inertia += self.mass / 2
             if self.jointB != None:
-                self.jointB.interia += self.mass / 2
+                self.jointB.inertia += self.mass / 2
 
     def getStrain(self):  # do animacji
         if self.broken:
@@ -158,6 +159,7 @@ class Connection:
         c = Connection(self.jointA, self.jointB, self.mass, self.maxCompression, self.compressionForceRate,
                        self.maxStrech, self.strechForceRate)
         c.broken = self.broken
+        c.material = self.material
         return c
 
     def breakToTwo(self, where: float = 0.5):
@@ -188,6 +190,8 @@ class Bridge:
 
     def copy(self):
         b = Bridge()
+        b.materials = self.materials
+
         for i, p in enumerate(self.points):
             p.indexOnBridge = i
             b.points.append(p.copy())
@@ -205,7 +209,7 @@ class Bridge:
         """
         :param size:
         :param bounds:
-        :return: touple of two lists of touples: with lines: (x1, y1, x2, y2, strain), with joints: (x, y, isStationary)
+        :return: tuple of two lists of tuples: with lines: (x1, y1, x2, y2, strain), with joints: (x, y, isStationary)
         """
         lines = []
         points = []
@@ -216,7 +220,7 @@ class Bridge:
         if i == 0:
             return lines, points,
 
-        epsilon: float = +1e-38;
+        epsilon: float = +1e-38
 
         rx: float = 0.0
         ry: float = 0.0
@@ -261,7 +265,7 @@ class Bridge:
         image = Image.new("RGB", (width, height), "white")
         draw = ImageDraw.Draw(image)
 
-        if model == None:
+        if model is None:
             model = self.getModelForRender((width, height), bounds)
             
         for line in model[0]:
