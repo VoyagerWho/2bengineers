@@ -293,8 +293,7 @@ class Bridge:
 
     def getConnectedToJoint(self, joint):
         return [con for con in self.connections if con.jointA == joint or con.jointB == joint]
-
-
+    
 class Material:
     """
     Class representing different connection materials
@@ -304,7 +303,7 @@ class Material:
 
     def __init__(self, name: str, maxLength: float, linearDensity: float,
                  maxCompression: float, compressionForceRate: float,
-                 maxStretch: float, stretchForceRate: float, costPerUnit: float):
+                 maxStretch: float, stretchForceRate: float, costPerUnit: float, desc : str = ""):
         """
         Basic method of creating material with its main properties
         :param name: name of the material
@@ -324,5 +323,37 @@ class Material:
         self.comFR: float = compressionForceRate
         self.maxStr: float = maxStretch
         self.strFR: float = stretchForceRate
-        self.cost = costPerUnit
-        self.desc = ""
+        self.cost : float = costPerUnit
+        self.desc : str = str(desc)
+
+    def __str__(self):
+        return "{" + str(self.name) + ", maxLen: " + str(self.maxLen) + ", linearDensity: " + str(self.linearDensity) + ", maxCompression: " + str(self.maxCompression) + ", compressionForceRate: " + str(self.compressionForceRate) + ", maxStretch: " + str(self.maxStretch) + ", stretchForceRate: " + str(self.stretchForceRate) + ", cost: " + str(self.cost) + ", desc: " + str(self.desc) + "}"
+
+class RawMaterial:
+    """
+    Class representing raw materials like ferritum, oak etc.
+    It will be used for creating Material classes.
+    """
+    def __init__(self, name : str, density : float, youngModule : float, yieldStrenght : float, cost : float, desc : str = ""):
+        self.name : str = str(name)
+        self.density : float = float(density)
+        self.youngModule : float = float(youngModule)
+        self.yieldStrenght : float = float(yieldStrenght)
+        self.cost : float = float(cost)
+        self.desc : str = str(desc)
+        
+    def __str__(self):
+        return "{" + self.name + ", density: " + str(self.density) + " [kg/m^3], youngModule: " + str(self.youngModule) + " [N/m^2], yieldStrenght: " + str(self.yieldStrenght) + " [N/m^2], cost: " + str(self.cost) + " [$/kg]}"
+        
+    def createMaterial(self, subname : str, maxLength : float, gauge : float, line : bool = False, customDesc : str = None):
+        if (subname == None):
+            subname = self.name
+        if (customDesc == None):
+            customDesc = self.desc
+        return Material(subname, maxLength, linearDensity = gauge * self.density, 
+                        maxCompression = {False: 1-self.yieldStrenght/self.youngModule, True: 0.0}[line], compressionForceRate = {False: self.youngModule, True: 0.0}[line], 
+                        maxStretch = 1+self.yieldStrenght/self.youngModule, stretchForceRate = self.youngModule,
+                        costPerUnit = self.cost * gauge, desc = customDesc)
+    
+    
+                        
