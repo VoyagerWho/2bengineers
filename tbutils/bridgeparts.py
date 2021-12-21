@@ -229,25 +229,14 @@ class Bridge:
         k: float = 1.0
 
         if size is not None:
-            maxX: int = 0
-            maxY: int = 0
-            minX: int = 0
-            minY: int = 0
-            for p in self.points:
-                if p.isStationary:
-                    v = p.position
-                    if v.x > maxX:
-                        maxX = v.x
-                    elif v.x < minX:
-                        minX = v.x
-                    if v.y > maxY:
-                        maxY = v.y
-                    elif v.y < minY:
-                        minY = v.y
+            maxX : float = max(p.position.x for p in self.points if p.isStationary)
+            maxY : float = max(p.position.y for p in self.points if p.isStationary)
+            minX : float = min(p.position.x for p in self.points if p.isStationary)
+            minY : float = min(p.position.y for p in self.points if p.isStationary)
 
             k = min(size[0] / float(maxX - minX + epsilon), size[1] / float(maxY - minY + epsilon)) / bounds
-            rx = float(-minX) - float(maxX - minX) / 2 + size[0] / k / 2
-            ry = float(-minY) - float(maxY - minY) / 2 + size[1] / k / 2
+            rx = -float(maxX + minX) / 2 + size[0] / k / 2
+            ry = -float(maxY + minY) / 2 + size[1] / k / 2
 
         for connection in self.connections:
             if not connection.broken:

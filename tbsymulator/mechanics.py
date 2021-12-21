@@ -117,7 +117,7 @@ class SimulationThread(Thread):
 
             self.time += self.timeStep
             while self.running and self.pause:
-                sleep(0.001)
+                sleep(min(0.001, abs(1/self.animationFPS)))
 
     def isBroken(self):
         for connection in self.bridge.connections:
