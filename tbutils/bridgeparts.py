@@ -29,7 +29,7 @@ class Joint:
             dv: m2.Vector2 = self.forces * (time / self.inertia)
             self.position += (self.velocity + dv / 2) * time
             self.velocity += dv
-            self.velocity *= expResistance # exp(-time * resistance)
+            self.velocity *= expResistance  # exp(-time * resistance)
         return self
 
     def prepare(self):
@@ -59,7 +59,8 @@ class Joint:
         return r
 
     def __str__(self):
-        return "Position = " + str(self.position) + "\tVelocity = " + str(self.velocity) + "\tForces = " + str(self.forces) + "\tInertia = " + str(self.inertia) + "\tIsStationary = " + str(self.isStationary)
+        return "Position = " + str(self.position) + "\tVelocity = " + str(self.velocity) + "\tForces = " + str(
+            self.forces) + "\tInertia = " + str(self.inertia) + "\tIsStationary = " + str(self.isStationary)
 
 
 class Connection:
@@ -73,15 +74,19 @@ class Connection:
         self.compressionForceRate: float = compressionForceRate
         self.maxStretch: float = maxStretch
         self.stretchForceRate: float = stretchForceRate
+        self.length = 0.0  # placeholder
         self.updateLength()
         self.broken = False
         self.cost = 0.0
         self.material = None
-        
+
     def __str__(self):
-        return "Joints: [" + str(self.jointA) + ", " + str(self.jointB) + "]\tMass=" + str(self.mass) + "\tMaxCompression=" + str(self.maxCompression) + "\tCompressionForceRate=" + str(self.compressionForceRate) + "\tMaxStretch=" + str(self.maxStretch) + "\tStretchForceRate=" + str(self.stretchForceRate) + "\tBroken: " + str(self.broken)
-        
-    def updateLength(self):        
+        return "Joints: [" + str(self.jointA) + ", " + str(self.jointB) + "]\tMass=" + str(
+            self.mass) + "\tMaxCompression=" + str(self.maxCompression) + "\tCompressionForceRate=" + str(
+            self.compressionForceRate) + "\tMaxStretch=" + str(self.maxStretch) + "\tStretchForceRate=" + str(
+            self.stretchForceRate) + "\tBroken: " + str(self.broken)
+
+    def updateLength(self):
         self.length: float = (self.jointA.position - self.jointB.position).length()
 
     @staticmethod
@@ -149,8 +154,9 @@ class Connection:
         return self.broken
 
     def copy(self):
-        c = Connection(jointA = self.jointA, jointB = self.jointB, mass = self.mass, maxCompression = self.maxCompression, compressionForceRate = self.compressionForceRate,
-                       maxStretch = self.maxStretch, stretchForceRate = self.stretchForceRate)
+        c = Connection(jointA=self.jointA, jointB=self.jointB, mass=self.mass, maxCompression=self.maxCompression,
+                       compressionForceRate=self.compressionForceRate,
+                       maxStretch=self.maxStretch, stretchForceRate=self.stretchForceRate)
         c.broken = self.broken
         c.material = self.material
         return c
@@ -163,7 +169,7 @@ class Connection:
                         self.maxStretch, self.stretchForceRate)
         c2 = Connection(j2, self.jointB, self.mass * (1.0 - where), self.maxCompression, self.compressionForceRate,
                         self.maxStretch, self.stretchForceRate)
-        return (j1, j2, c1, c2)
+        return j1, j2, c1, c2
 
     def addCost(self, cost: float):
         self.cost = cost
@@ -220,10 +226,10 @@ class Bridge:
         k: float = 1.0
 
         if size is not None:
-            maxX : float = max(p.position.x for p in self.points if p.isStationary)
-            maxY : float = max(p.position.y for p in self.points if p.isStationary)
-            minX : float = min(p.position.x for p in self.points if p.isStationary)
-            minY : float = min(p.position.y for p in self.points if p.isStationary)
+            maxX: float = max(p.position.x for p in self.points if p.isStationary)
+            maxY: float = max(p.position.y for p in self.points if p.isStationary)
+            minX: float = min(p.position.x for p in self.points if p.isStationary)
+            minY: float = min(p.position.y for p in self.points if p.isStationary)
 
             k = min(size[0] / float(maxX - minX + epsilon), size[1] / float(maxY - minY + epsilon)) / bounds
             rx = -float(maxX + minX) / 2 + size[0] / k / 2
@@ -240,7 +246,7 @@ class Bridge:
 
         return lines, points
 
-    def render(self, fileName: str, width: int = 640, height: int = 480, bounds: float = 1.3, model = None):
+    def render(self, fileName: str, width: int = 640, height: int = 480, bounds: float = 1.3, model=None):
 
         from PIL import Image, ImageDraw
 
@@ -249,7 +255,7 @@ class Bridge:
 
         if model is None:
             model = self.getModelForRender((width, height), bounds)
-            
+
         for line in model[0]:
             draw.line([(line[0], height - line[1] - 1), (line[2], height - line[3] - 1)], width=5,
                       fill=(int(255 * line[4]) + int(255 - 255 * line[4]) * 256), joint="curve")
@@ -273,7 +279,8 @@ class Bridge:
 
     def getConnectedToJoint(self, joint):
         return [con for con in self.connections if con.jointA == joint or con.jointB == joint]
-    
+
+
 class Material:
     """
     Class representing different connection materials
@@ -283,7 +290,7 @@ class Material:
 
     def __init__(self, name: str, maxLength: float, linearDensity: float,
                  maxCompression: float, compressionForceRate: float,
-                 maxStretch: float, stretchForceRate: float, costPerUnit: float, desc : str = ""):
+                 maxStretch: float, stretchForceRate: float, costPerUnit: float, desc: str = ""):
         """
         Basic method of creating material with its main properties
         :param name: name of the material
@@ -303,37 +310,43 @@ class Material:
         self.comFR: float = compressionForceRate
         self.maxStr: float = maxStretch
         self.strFR: float = stretchForceRate
-        self.cost : float = costPerUnit
-        self.desc : str = str(desc)
+        self.cost: float = costPerUnit
+        self.desc: str = str(desc)
 
     def __str__(self):
-        return "{" + str(self.name) + ", maxLen: " + str(self.maxLen) + ", linearDensity: " + str(self.linearDensity) + ", maxCompression: " + str(self.maxCompression) + ", compressionForceRate: " + str(self.compressionForceRate) + ", maxStretch: " + str(self.maxStretch) + ", stretchForceRate: " + str(self.stretchForceRate) + ", cost: " + str(self.cost) + ", desc: " + str(self.desc) + "}"
+        return "{" + str(self.name) + ", maxLen: " + str(self.maxLen) + ", linearDensity: " + str(
+            self.linDen) + ", maxCompression: " + str(self.maxCom) + ", compressionForceRate: " + str(
+            self.comFR) + ", maxStretch: " + str(self.maxStr) + ", stretchForceRate: " + str(
+            self.strFR) + ", cost: " + str(self.cost) + ", desc: " + str(self.desc) + "}"
+
 
 class RawMaterial:
     """
     Class representing raw materials like ferritum, oak etc.
     It will be used for creating Material classes.
     """
-    def __init__(self, name : str, density : float, youngModule : float, yieldStrenght : float, cost : float, desc : str = ""):
-        self.name : str = str(name)
-        self.density : float = float(density)
-        self.youngModule : float = float(youngModule)
-        self.yieldStrenght : float = float(yieldStrenght)
-        self.cost : float = float(cost)
-        self.desc : str = str(desc)
-        
+
+    def __init__(self, name: str, density: float, youngModule: float, yieldStrength: float, cost: float,
+                 desc: str = ""):
+        self.name: str = str(name)
+        self.density: float = float(density)
+        self.youngModule: float = float(youngModule)
+        self.yieldStrength: float = float(yieldStrength)
+        self.cost: float = float(cost)
+        self.desc: str = str(desc)
+
     def __str__(self):
-        return "{" + self.name + ", density: " + str(self.density) + " [kg/m^3], youngModule: " + str(self.youngModule) + " [N/m^2], yieldStrenght: " + str(self.yieldStrenght) + " [N/m^2], cost: " + str(self.cost) + " [$/kg]}"
-        
-    def createMaterial(self, subname : str, maxLength : float, gauge : float, line : bool = False, customDesc : str = None):
-        if (subname == None):
+        return "{" + self.name + ", density: " + str(self.density) + " [kg/m^3], youngModule: " + str(
+            self.youngModule) + " [N/m^2], yieldStrength: " + str(self.yieldStrength) + " [N/m^2], cost: " + str(
+            self.cost) + " [$/kg]}"
+
+    def createMaterial(self, subname: str, maxLength: float, gauge: float, line: bool = False, customDesc: str = None):
+        if subname is None:
             subname = self.name
-        if (customDesc == None):
+        if customDesc is None:
             customDesc = self.desc
-        return Material(subname, maxLength, linearDensity = gauge * self.density, 
-                        maxCompression = {False: 1-self.yieldStrenght/self.youngModule, True: 0.0}[line], compressionForceRate = {False: self.youngModule, True: 0.0}[line], 
-                        maxStretch = 1+self.yieldStrenght/self.youngModule, stretchForceRate = self.youngModule,
-                        costPerUnit = self.cost * gauge, desc = customDesc)
-    
-    
-                        
+        return Material(subname, maxLength, linearDensity=gauge * self.density,
+                        maxCompression={False: 1 - self.yieldStrength / self.youngModule, True: 0.0}[line],
+                        compressionForceRate={False: self.youngModule, True: 0.0}[line],
+                        maxStretch=1 + self.yieldStrength / self.youngModule, stretchForceRate=self.youngModule,
+                        costPerUnit=self.cost * gauge, desc=customDesc)

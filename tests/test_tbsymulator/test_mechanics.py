@@ -148,7 +148,7 @@ def test_AISimulate():
     deltaTime = 1e-6
     v = 10
     
-    while v > 1e-3:# time < endTime:
+    while v > 1e-6:# time < endTime:
         deltaTime = mechanics.simulateTimeStepForAI(bridge, deltaTime)
         time += deltaTime
         it += 1
@@ -179,7 +179,7 @@ def test_RenderBridge2():
     deltaTime = 1e-6
 
     while time < endTime:
-        deltaTime = mechanics.simulateTimeStep(bridge, deltaTime, tol=1e-3, resistance=0.5, realBrakes=True,
+        deltaTime = mechanics.simulateTimeStep(bridge, deltaTime, tol=1e-1, resistance=0.5, realBrakes=True,
                                                toleranceCountDependent=False, relaxationMode = 0.000)
         time += deltaTime
         it += 1
