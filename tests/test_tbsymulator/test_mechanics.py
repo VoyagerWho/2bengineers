@@ -132,8 +132,8 @@ def test_RenderBridge():
         draw.line([(line[0], 480 - line[1]), (line[2], 480 - line[3])], width=5,
                   fill=(int(255 * line[4]) + int(255 - 255 * line[4]) * 256), joint="curve")
 
-    image.save("out1.png")
-    bridge.render("out2.png")
+    image.save("/dev/shm/out1.png")
+    bridge.render("/dev/shm/out2.png")
 
 
 def test_RenderBridge2():
@@ -161,7 +161,7 @@ def test_RenderBridge2():
 
         if time >= prevFrame + 1.0 / fps:
             if trueRender:
-                bridge.render("frame" + str(frameCount) + ".png")
+                bridge.render("/dev/shm/frame" + str(frameCount) + ".png")
             print("frame: " + str(frameCount))
             frameCount += 1
             prevFrame = time
@@ -229,7 +229,7 @@ def test_simulation():
         plt.plot(timeValues, VxValues, ls='-', lw=1, label='Vx');
         plt.plot(timeValues, VyValues, ls='-', lw=1, label='Vy');
         plt.legend()
-        plt.savefig("Positions.png")
+        plt.savefig("/dev/shm/Positions.png")
         plt.close()
 
         fig, ax1 = plt.subplots()
@@ -239,7 +239,7 @@ def test_simulation():
 
         ax2.plot(timeValues, VValues, ls='-', color='y', lw=1, label='Velocity');
         fig.legend()
-        fig.savefig("StrainVsVelocity.png")
+        fig.savefig("/dev/shm/StrainVsVelocity.png")
 
 
 

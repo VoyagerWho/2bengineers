@@ -1,4 +1,5 @@
 from math import sqrt
+from math import exp
 import tbutils.math2d as m2
 from threading import Thread
 from time import sleep
@@ -36,13 +37,15 @@ def simulateTimeStep(bridge, timeStep: float = 1e-6, gravity: m2.Vector2 = m2.Ve
             for connection in bridge.connections:
                 connection.addIntertia()
 
+            expResistance : float = exp(-2 * timeStep * resistance)
             if i == 0:
-                copyJoints = [joint.copy().move(2 * timeStep, resistance) for joint in bridge.points]
+                copyJoints = [joint.copy().move(2 * timeStep, expResistance) for joint in bridge.points]
                 #for joint in bridge.points:
-                    #copyJoints.append(joint.copy().move(2 * timeStep, resistance))
+                    #copyJoints.append(joint.copy().move(2 * timeStep, expResistance))
 
+            expResistance : float = exp(-timeStep * resistance)
             for joint in bridge.points:
-                joint.move(timeStep, resistance)
+                joint.move(timeStep, expResistance)
 
         delta = sum(bridge.points[i].calcDelta(copyJoints[i]) for i in range(len(copyJoints)))
         #delta = 0 

@@ -24,12 +24,12 @@ class Joint:
         self.inertia: float = 0
         self.indexOnBridge: int = 0
 
-    def move(self, time: float, resistance: float):
+    def move(self, time: float, expResistance: float):
         if (not self.isStationary) and (self.inertia != 0):
             dv: m2.Vector2 = self.forces * (time / self.inertia)
             self.position += self.velocity * time + dv * (time / 2)
             self.velocity += dv
-            self.velocity *= exp(-time * resistance)
+            self.velocity *= expResistance # exp(-time * resistance)
         return self
 
     def prepare(self):
@@ -49,20 +49,13 @@ class Joint:
         return c
 
     def calcDelta(self, j):
-        m: float = (self.position.length()
-                    + self.velocity.length()
-                    + self.forces.length()
-                    + j.position.length()
-                    + j.velocity.length()
-                    + j.forces.length()) / 2
+        m: float = (self.position.length() + self.velocity.length() + self.forces.length() + j.position.length() + j.velocity.length() + j.forces.length()) / 2
         if m > 0:
-            return (self.position - j.position).length() + (self.velocity - j.velocity).length() + (
-                    self.forces - j.forces).length() / m
+            return (self.position - j.position).length() + (self.velocity - j.velocity).length() + (self.forces - j.forces).length() / m
         return 0
 
     def __str__(self):
-        return "Position = " + str(self.position) + "\tVelocity = " + str(self.velocity) + "\tForces = " + str(
-            self.forces) + "\tInertia = " + str(self.inertia) + "\tIsStationary = " + str(self.isStationary)
+        return "Position = " + str(self.position) + "\tVelocity = " + str(self.velocity) + "\tForces = " + str(self.forces) + "\tInertia = " + str(self.inertia) + "\tIsStationary = " + str(self.isStationary)
 
 
 class Connection:
@@ -115,20 +108,14 @@ class Connection:
         if not self.broken:
             forces: m2.Vector2 = self.getForce()
             gm: m2.Vector2 = gravity * (self.mass / 2)
-            if self.jointA != None:
-                self.jointA.forces += gm + forces
-            if self.jointB != None:
-                self.jointB.forces += gm - forces
+            self.jointA.forces += gm + forces
+            self.jointB.forces += gm - forces
 
     def addIntertia(self):
         if not self.broken:
             v: m2.Vector2 = (self.jointA.position - self.jointB.position)
-            forcesA: float = self.jointA.forces.length()
-            forcesB: float = self.jointB.forces.length()
-            if self.jointA != None:
-                self.jointA.inertia += self.mass / 2
-            if self.jointB != None:
-                self.jointB.inertia += self.mass / 2
+            self.jointA.inertia += self.mass / 2
+            self.jointB.inertia += self.mass / 2
 
     def getStrain(self):  # do animacji
         if self.broken:
