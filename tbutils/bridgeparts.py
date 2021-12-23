@@ -49,7 +49,14 @@ class Joint:
         return c
 
     def calcDelta(self, j):
-        return (self.position - j.position).length() + ((self.velocity - j.velocity).length())/(self.velocity.length() + self.forces.length()) + ((self.forces - j.forces).length())/(j.velocity.length() + j.forces.length()) 
+        mv : float = (self.velocity + j.velocity).length()/2
+        mf : float = (j.velocity.length() + j.forces.length())/2
+        r : float = (self.position - j.position).length()
+        if mv > 0:
+            r += (self.velocity - j.velocity).length()/mv
+        if mf > 0:
+            r += (self.forces - j.forces).length()/mf
+        return r
 
     def __str__(self):
         return "Position = " + str(self.position) + "\tVelocity = " + str(self.velocity) + "\tForces = " + str(self.forces) + "\tInertia = " + str(self.inertia) + "\tIsStationary = " + str(self.isStationary)

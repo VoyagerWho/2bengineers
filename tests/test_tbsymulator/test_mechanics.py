@@ -135,6 +135,33 @@ def test_RenderBridge():
     image.save("/dev/shm/out1.png")
     bridge.render("/dev/shm/out2.png")
 
+def test_AISimulate():
+    skip = False
+    if skip:
+        return
+
+    bridge = createSampleBridge()
+    endTime = 15
+    time = 0.0
+    prevFrame = 0.0
+    it = 0
+    deltaTime = 1e-6
+    v = 10
+    
+    while v > 1e-3:# time < endTime:
+        deltaTime = mechanics.simulateTimeStepForAI(bridge, deltaTime)
+        time += deltaTime
+        it += 1
+        if it % 100 == 0:
+            v = max(p.velocity.length() for p in bridge.points)
+            print(time, v)
+
+
+def test_bridgeSurvive():
+    bridge = createSampleBridge()
+    print(mechanics.checkIfBridgeWillSurvive(bridge))
+    print(max(j.velocity.length() for j in bridge.points))
+    
 
 def test_RenderBridge2():
     skip = False
@@ -152,8 +179,8 @@ def test_RenderBridge2():
     deltaTime = 1e-6
 
     while time < endTime:
-        deltaTime = mechanics.simulateTimeStep(bridge, deltaTime, tol=1e-3, resistance=0.0, realBrakes=True,
-                                               toleranceCountDependent=True, relaxationMode = 0.001)
+        deltaTime = mechanics.simulateTimeStep(bridge, deltaTime, tol=1e-3, resistance=0.5, realBrakes=True,
+                                               toleranceCountDependent=False, relaxationMode = 0.000)
         time += deltaTime
         it += 1
         # deltaTime = min(1.0/fps/2, deltaTime)

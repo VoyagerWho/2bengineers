@@ -54,6 +54,10 @@ def simulateTimeStep(bridge, timeStep: float = 1e-6, gravity: m2.Vector2 = m2.Ve
             #delta += bridge.points[i].calcDelta(copyJoints[i])
 
         copyJoints.clear()
+        
+    if timeStep < relaxationMode:
+        for joint in bridge.points:
+            joint.velocity /= 2
 
     orginalJoints.clear()
 
@@ -76,14 +80,33 @@ def simulateTimeStep(bridge, timeStep: float = 1e-6, gravity: m2.Vector2 = m2.Ve
 
     additions.clear()
     
-    if timeStep < relaxationMode:
-        for joint in bridge.points:
-            joint.velocity /= 2
 
     return timeStep * 2
 
-def simulateTimeStepForAI(bridge, timeStep: float = 1e-6, gravity: m2.Vector2 = m2.Vector2(0, -9.81)):
-    return simulateTimeStepFor(bridge = bridge, timeStep = timeStep, gravity = gravity, resistance = 0.0, relaxationMode = 0.001)
+
+def simulateTimeStepForAI(bridge, timeStep: float = 1e-6, tol : float = 1e-3, toleranceCountDependent : float = True, gravity: m2.Vector2 = m2.Vector2(0, -9.81), relaxationValue : float = 1e-3):
+    return simulateTimeStep(bridge = bridge, timeStep = timeStep, tol = tol, toleranceCountDependent = toleranceCountDependent, gravity = gravity, resistance = 0.0, relaxationMode = relaxationValue)
+
+def checkIfBridgeWillSurvive(bridge, velocityTolerance : float = 1e-6, minTime : float = 1, maxTime : float = 1000):
+    
+    endTime = 15
+    time = 0.0
+    prevFrame = 0.0
+    it = 0
+    deltaTime = 1e-6
+    velocity : float = 0.0
+    
+    while time < maxTime:
+        deltaTime = simulateTimeStepForAI(bridge, deltaTime)
+        time += deltaTime
+        for connection in bridge.connections:
+            if connection.broken:
+                return False
+        if (time >= minTime) and (max(j.velocity.length() for j in bridge.points) <= velocityTolerance):
+            return True
+    
+    return True
+    
 
 class SimulationThread(Thread):
 
