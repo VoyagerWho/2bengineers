@@ -152,8 +152,8 @@ def test_RenderBridge2():
     deltaTime = 1e-6
 
     while time < endTime:
-        deltaTime = mechanics.simulateTimeStep(bridge, deltaTime, tol=1e-3, resistance=0.5, realBrakes=True,
-                                               toleranceCountDependent=True)
+        deltaTime = mechanics.simulateTimeStep(bridge, deltaTime, tol=1e-3, resistance=0.0, realBrakes=True,
+                                               toleranceCountDependent=True, relaxationMode = 0.001)
         time += deltaTime
         it += 1
         # deltaTime = min(1.0/fps/2, deltaTime)

@@ -7,7 +7,7 @@ from time import sleep
 
 def simulateTimeStep(bridge, timeStep: float = 1e-6, gravity: m2.Vector2 = m2.Vector2(0, -9.81),
                      resistance: float = 1e-3, tol: float = 1e-3, realBrakes: bool = False,
-                     toleranceCountDependent: bool = False, safeBreaking: bool = False):
+                     toleranceCountDependent: bool = False, safeBreaking: bool = False, relaxationMode : float = 0.0):
     copyJoints = []
     orginalJoints = [joint.copy() for joint in bridge.points]
 
@@ -37,8 +37,8 @@ def simulateTimeStep(bridge, timeStep: float = 1e-6, gravity: m2.Vector2 = m2.Ve
             for connection in bridge.connections:
                 connection.addIntertia()
 
-            expResistance : float = exp(-2 * timeStep * resistance)
             if i == 0:
+                expResistance : float = exp(-2 * timeStep * resistance)
                 copyJoints = [joint.copy().move(2 * timeStep, expResistance) for joint in bridge.points]
                 #for joint in bridge.points:
                     #copyJoints.append(joint.copy().move(2 * timeStep, expResistance))
@@ -48,6 +48,7 @@ def simulateTimeStep(bridge, timeStep: float = 1e-6, gravity: m2.Vector2 = m2.Ve
                 joint.move(timeStep, expResistance)
 
         delta = sum(bridge.points[i].calcDelta(copyJoints[i]) for i in range(len(copyJoints)))
+        
         #delta = 0 
         #for i in range(len(copyJoints)):
             #delta += bridge.points[i].calcDelta(copyJoints[i])
@@ -74,15 +75,22 @@ def simulateTimeStep(bridge, timeStep: float = 1e-6, gravity: m2.Vector2 = m2.Ve
         pointCount += 2
 
     additions.clear()
+    
+    if timeStep < relaxationMode:
+        for joint in bridge.points:
+            joint.velocity /= 2
 
     return timeStep * 2
 
+def simulateTimeStepForAI(bridge, timeStep: float = 1e-6, gravity: m2.Vector2 = m2.Vector2(0, -9.81)):
+    return simulateTimeStepFor(bridge = bridge, timeStep = timeStep, gravity = gravity, resistance = 0.0, relaxationMode = 0.001)
 
 class SimulationThread(Thread):
 
     def __init__(self, bridge, timeStep: float = 1e-6, gravity: m2.Vector2 = m2.Vector2(0, -9.81),
                  resistance: float = 1e-3, tol: float = 1e-3, realBrakes: bool = False,
-                 toleranceCountDependent: bool = False, safeBreaking: bool = False, makeAnimation: bool = False, animationSize : (int, int) = (640, 480), animationFPS : float = 60.0):
+                 toleranceCountDependent: bool = False, safeBreaking: bool = False, relaxationMode : float = 0.0, 
+                 makeAnimation: bool = False, animationSize : (int, int) = (640, 480), animationFPS : float = 60.0):
         self.bridge = bridge
         self.timeStep = timeStep
         self.gravity = gravity
@@ -91,6 +99,7 @@ class SimulationThread(Thread):
         self.realBrakes = realBrakes
         self.toleranceCountDependent = toleranceCountDependent
         self.safeBreaking = safeBreaking
+        self.relaxationMode = relaxationMode
 
         self.time: float = 0
         self.running = True
@@ -110,7 +119,7 @@ class SimulationThread(Thread):
                 self.timeStep = simulateTimeStep(bridge=self.bridge, timeStep=self.timeStep, gravity=self.gravity,
                                                  resistance=self.resistance, tol=self.tol, realBrakes=self.realBrakes,
                                                  toleranceCountDependent=self.toleranceCountDependent,
-                                                 safeBreaking=self.safeBreaking)
+                                                 safeBreaking=self.safeBreaking, relaxationMode = self.relaxationMode)
                 if self.makeAnimation and (self.time - lastFrameTime >= 1/self.animationFPS):
                     lastFrameTime = self.time;
                     self.animation.append((self.time, self.bridge.getModelForRender(size = self.animationSize)))

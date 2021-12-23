@@ -27,7 +27,7 @@ class Joint:
     def move(self, time: float, expResistance: float):
         if (not self.isStationary) and (self.inertia != 0):
             dv: m2.Vector2 = self.forces * (time / self.inertia)
-            self.position += self.velocity * time + dv * (time / 2)
+            self.position += (self.velocity + dv / 2) * time
             self.velocity += dv
             self.velocity *= expResistance # exp(-time * resistance)
         return self
@@ -49,10 +49,7 @@ class Joint:
         return c
 
     def calcDelta(self, j):
-        m: float = (self.position.length() + self.velocity.length() + self.forces.length() + j.position.length() + j.velocity.length() + j.forces.length()) / 2
-        if m > 0:
-            return (self.position - j.position).length() + (self.velocity - j.velocity).length() + (self.forces - j.forces).length() / m
-        return 0
+        return (self.position - j.position).length() + ((self.velocity - j.velocity).length())/(self.velocity.length() + self.forces.length()) + ((self.forces - j.forces).length())/(j.velocity.length() + j.forces.length()) 
 
     def __str__(self):
         return "Position = " + str(self.position) + "\tVelocity = " + str(self.velocity) + "\tForces = " + str(self.forces) + "\tInertia = " + str(self.inertia) + "\tIsStationary = " + str(self.isStationary)
