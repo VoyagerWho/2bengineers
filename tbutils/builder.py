@@ -22,12 +22,12 @@ class Builder:
         """
         materials = [
             Material(
-                "Asphalt Road", 100.0, 0.1,
+                "Asphalt Road", 100.0, 0.2,
                 0.9, 1e4,
                 1.1, 1e4, 20.0
             ),
             Material(
-                "Steel Beam", 150.0, 0.2,
+                "Steel Beam", 150.0, 0.4,
                 0.9, 1e4,
                 1.1, 1e4, 20.0
             ),
@@ -66,7 +66,7 @@ class Builder:
                         for i in range(1, noroad)]
         roadjoints.append(Joint(b, True))
 
-        length = 0.7 * materials[1].maxLen
+        length = materials[1].maxLen
         ratio = math.sqrt(length / roadlen - 1)
         joints = [Joint([0, 0]) for _ in range(noroad)]
         roads = [0 for _ in range(noroad)]
@@ -165,7 +165,5 @@ class Builder:
         bridge = Bridge()
         bridge.points = joints
         bridge.connections = beams
-        for con in bridge.connections:
-            assert con.maxStretch != 0 and con.stretchForceRate != 0 
         bridge.materials = materials
         return bridge
