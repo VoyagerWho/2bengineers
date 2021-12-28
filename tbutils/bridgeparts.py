@@ -122,7 +122,6 @@ class Connection:
 
     def addIntertia(self):
         if not self.broken:
-            v: m2.Vector2 = (self.jointA.position - self.jointB.position)
             self.jointA.inertia += self.mass / 2
             self.jointB.inertia += self.mass / 2
 

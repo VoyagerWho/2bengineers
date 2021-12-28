@@ -4,10 +4,22 @@ import tbutils.math2d as m2
 from threading import Thread
 from time import sleep
 
-
 def simulateTimeStep(bridge, timeStep: float = 1e-6, gravity: m2.Vector2 = m2.Vector2(0, -9.81),
                      resistance: float = 1e-3, tol: float = 1e-3, realBrakes: bool = False,
                      toleranceCountDependent: bool = False, safeBreaking: bool = False, relaxationMode: float = 0.0):
+    """
+    Function for calculating the next time step for the bridge
+    :param bridge: The bridge which is sumulated.
+    :param timeStep: On the first step: any positive real number, on the each following step: the result of this function.
+    :param gravity: Everyone knows what it is.
+    :param resistance: Value for breaking the velocity of each part of the bridge.
+    :param tol: Toleracne of calculating (positive real number). The bigger value means faster calculation time, but less precision.
+    :param realBreakes: For True - broken bridge connection is divided into two connections with points in half of the original connection.
+    :param toleranceCountDependent: In case of breaking and realBrakes==True the tolerance will be increased if the count of points will increase.
+    :param safeBreaking: When realBrakes==True the created connections has two times more strength to avoid subsequent breaks of them. 
+    :param relaxationMode: When timeStep is less than the relaxationMode, velocity is divided by two. It makes slow bridge relaxation. If the value is different than zero, the simulations cannot be used for live-movements (simulating where the parts' velocity and momentum has matter) - for example for simulating the bridge's behavior during an eartch quake or during its destroying.
+    """
+    
     copyJoints = []
     orginalJoints = [joint.copy() for joint in bridge.points]
 
@@ -87,9 +99,19 @@ def simulateTimeStep(bridge, timeStep: float = 1e-6, gravity: m2.Vector2 = m2.Ve
     return timeStep * 2
 
 def simulateTimeStepForAI(bridge, timeStep: float = 1e-6, tol : float = 1e-3, toleranceCountDependent : float = True, gravity: m2.Vector2 = m2.Vector2(0, -9.81), relaxationValue : float = 1e-3):
+        
+    """
+    Alias for simulateTimeStep, but with some predifinied default parameters which makes the simulation faster.
+    Warning: It uses relaxationValue (alias for: relaxationMode) different than zero.
+    """
+
     return simulateTimeStep(bridge = bridge, timeStep = timeStep, tol = tol, toleranceCountDependent = toleranceCountDependent, gravity = gravity, resistance = 0.0, relaxationMode = relaxationValue)
 
-def checkIfBridgeWillSurvive(bridge, velocityTolerance : float = 1e-6, minTime : float = 1, maxTime : float = 1000):
+def checkIfBridgeWillSurvive(bridge, velocityTolerance : float = 1e-5, minTime : float = 1, maxTime : float = 1000):
+    
+    """
+    The function cheks if the bridge can be slow placed without self-destroying (breaking any part). 
+    """
     
     endTime = 15
     time = 0.0
@@ -104,11 +126,10 @@ def checkIfBridgeWillSurvive(bridge, velocityTolerance : float = 1e-6, minTime :
         for connection in bridge.connections:
             if connection.broken:
                 return False
-        if (time >= minTime) and (max(j.velocity.length() for j in bridge.points) <= velocityTolerance):
+        if max(j.velocity.length() for j in bridge.points) <= velocityTolerance:
             return True
     
     return True
-
 
 def simulate(bridge, minTimeStep: float = 1e-6, maxTime: float = 5.0, timeStep: float = 1e-6,
              interval: float = 0.05, gravity: m2.Vector2 = m2.Vector2(0, -9.81)):
@@ -136,6 +157,11 @@ def simulate(bridge, minTimeStep: float = 1e-6, maxTime: float = 5.0, timeStep: 
 
 
 class SimulationThread(Thread):
+    
+    """
+    Simulating the bridge in another thread.
+    For constructor parameters see: simulateTimeStep
+    """
 
     def __init__(self, bridge, timeStep: float = 1e-6, gravity: m2.Vector2 = m2.Vector2(0, -9.81),
                  resistance: float = 1e-3, tol: float = 1e-3, realBrakes: bool = False,
