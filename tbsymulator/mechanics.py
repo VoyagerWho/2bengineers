@@ -2,7 +2,7 @@ from math import sqrt
 from math import exp
 import tbutils.math2d as m2
 from threading import Thread
-from time import sleep
+from time import sleep, time as getTime
 
 def simulateTimeStep(bridge, timeStep: float = 1e-6, gravity: m2.Vector2 = m2.Vector2(0, -9.81),
                      resistance: float = 1e-3, tol: float = 1e-3, realBrakes: bool = False,
@@ -47,7 +47,7 @@ def simulateTimeStep(bridge, timeStep: float = 1e-6, gravity: m2.Vector2 = m2.Ve
                 connection.addForces(gravity)
 
             for connection in bridge.connections:
-                connection.addIntertia()
+                connection.addInertia()
 
             if i == 0:
                 expResistance: float = exp(-2 * timeStep * resistance)
@@ -59,6 +59,7 @@ def simulateTimeStep(bridge, timeStep: float = 1e-6, gravity: m2.Vector2 = m2.Ve
             for joint in bridge.points:
                 joint.move(timeStep, expResistance)
 
+        #delta = sum(abs(bridge.points[i].velocity.length() - copyJoints[i].velocity.length()) for i in range(len(copyJoints)))/(1+sum(bridge.points[i].velocity.length() + copyJoints[i].velocity.length() for i in range(len(copyJoints)))) + sum(abs(bridge.points[i].forces.length() - copyJoints[i].forces.length()) for i in range(len(copyJoints)))/(1+sum(bridge.points[i].forces.length() + copyJoints[i].forces.length() for i in range(len(copyJoints))))
         delta = sum(bridge.points[i].calcDelta(copyJoints[i]) for i in range(len(copyJoints)))
 
         # delta = 0
@@ -66,10 +67,10 @@ def simulateTimeStep(bridge, timeStep: float = 1e-6, gravity: m2.Vector2 = m2.Ve
         # delta += bridge.points[i].calcDelta(copyJoints[i])
 
         copyJoints.clear()
-        
-    if timeStep < relaxationMode:
-        for joint in bridge.points:
-            joint.velocity /= 2
+
+        if timeStep < relaxationMode:
+            for joint in orginalJoints:
+                joint.velocity /= 2
 
     orginalJoints.clear()
 
@@ -98,7 +99,7 @@ def simulateTimeStep(bridge, timeStep: float = 1e-6, gravity: m2.Vector2 = m2.Ve
 
     return timeStep * 2
 
-def simulateTimeStepForAI(bridge, timeStep: float = 1e-6, tol : float = 1e-3, toleranceCountDependent : float = True, gravity: m2.Vector2 = m2.Vector2(0, -9.81), relaxationValue : float = 1e-3):
+def simulateTimeStepForAI(bridge, timeStep: float = 1e-6, tol: float = 1e-3, toleranceCountDependent: float = True, gravity: m2.Vector2 = m2.Vector2(0, -9.81), relaxationValue: float = 1e-3):
         
     """
     Alias for simulateTimeStep, but with some predifinied default parameters which makes the simulation faster.
@@ -107,52 +108,80 @@ def simulateTimeStepForAI(bridge, timeStep: float = 1e-6, tol : float = 1e-3, to
 
     return simulateTimeStep(bridge = bridge, timeStep = timeStep, tol = tol, toleranceCountDependent = toleranceCountDependent, gravity = gravity, resistance = 0.0, relaxationMode = relaxationValue)
 
-def checkIfBridgeWillSurvive(bridge, velocityTolerance : float = 1e-5, minTime : float = 1, maxTime : float = 1000):
+def checkIfBridgeWillSurvive(bridge, accelerationTolerance: float = 1e-3, minTime: float = 1, maxTime: float = 1000, gravity: m2.Vector2 = m2.Vector2(0, -9.81)):
     
     """
     The function cheks if the bridge can be slow placed without self-destroying (breaking any part). 
     """
-    
+
     endTime = 15
     time = 0.0
     prevFrame = 0.0
     it = 0
     deltaTime = 1e-6
-    velocity : float = 0.0
-    
+
     while time < maxTime:
-        deltaTime = simulateTimeStepForAI(bridge, deltaTime)
+        deltaTime = simulateTimeStepForAI(bridge, deltaTime, gravity=gravity)
         time += deltaTime
         for connection in bridge.connections:
             if connection.broken:
                 return False
-        if max(j.velocity.length() for j in bridge.points) <= velocityTolerance:
+        #print(max(j.forces.length()/j.inertia for j in bridge.points if (not j.isStationary) and (j.inertia != 0)), max(j.velocity.length() for j in bridge.points));
+        if max([j.forces.length()/j.inertia for j in bridge.points if (not j.isStationary) and (j.inertia != 0)], default=0.0) <= accelerationTolerance:
             return True
-    
+
     return True
+
 
 def simulate(bridge, minTimeStep: float = 1e-6, maxTime: float = 5.0, timeStep: float = 1e-6,
              interval: float = 0.05, gravity: m2.Vector2 = m2.Vector2(0, -9.81)):
+    print("Starting new simulation")
     time = 0
     strains = []
     break_moments = [-1.0 for _ in range(len(bridge.connections))]
     next_frame = interval
     road_broke = False
-    while not road_broke and time < maxTime:
-        timeStep = simulateTimeStepForAI(bridge=bridge, timeStep=timeStep, gravity=gravity)
+    maxAcc = 10.0
+    prevTimeEfficiency = 0.0
+    relaxationValue = 0.001
+    relaxationChange = 1.01
+    energy = bridge.getPotentialEnergy(gravity)
+    prevEnergy = energy
+    
+    print("BridgeInfo: ", len(bridge.connections), len(bridge.points))
+    bridge.relaxPendulums(gravity)
+    
+    while not road_broke and maxAcc > 1e-3:# time < maxTime:
+        
+        tb = getTime()
+        timeStep = simulateTimeStepForAI(bridge=bridge, timeStep=timeStep, gravity=gravity, tol=0.1, relaxationValue=0.001)
+        energy = bridge.getPotentialEnergy(gravity)
+        timeEfficiency = abs(prevEnergy-energy)/(getTime() - tb)
+        prevEnergy = energy
+        
+        if timeEfficiency < prevTimeEfficiency:
+            relaxationChange = 1/relaxationChange
+        relaxationValue *= relaxationChange
+        prevTimeEfficiency = timeEfficiency
+        prevAcc = maxAcc
+        
         time += timeStep
-        timeStep = min(max(timeStep, minTimeStep), interval)
-        # print(f'{time:0.6f}')
+        maxAcc = max([j.forces.length()/j.inertia for j in bridge.points if (not j.isStationary) and (j.inertia != 0)], default=0.0)
+                        
+        #timeStep = min(max(timeStep, minTimeStep), interval)
+        #print(f'{time:0.6f}')
         if time >= next_frame:
             strains.append([con.getStrain() for con in bridge.connections])
             next_frame += interval
-            print(f'{time:0.6f}\t{max(strains[-1]):0.4f}')
+            print("mechanics.simulate: " + f'{time:0.6f}\t{max(strains[-1], default=0.0):0.4f}', "\t", maxAcc, "\t", relaxationValue,"\t", energy)
+            bridge.render("/dev/shm/test"+str(getTime())+".png")
         for i, con in enumerate(bridge.connections):
             if con.broken and break_moments[i] == -1.0:
                 break_moments[i] = time
                 if con.material == bridge.materials[0]:
                     road_broke = True
     strains.append([con.getStrain() for con in bridge.connections])
+    print("Broken: ", road_broke)
     return time, strains, break_moments
 
 

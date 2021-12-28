@@ -6,10 +6,13 @@ Two main networks:
 """
 from __future__ import print_function
 import os
+import random
+
 import neat
 import tbsymulator.mechanics as sim
 from tbutils.bridgeparts import Bridge
 import tbneuralnetwork.nueralnetworkfunctions as nnf
+import pickle
 
 """
 NN performing modifications on bridge joints
@@ -50,7 +53,6 @@ Structure:
             -> means:
                 call: changeConnectionMaterial(...,...,0.65)
 """
-print("Module reloaded!")
 inputs_j = []
 outputs_j = []
 
@@ -178,13 +180,12 @@ class BridgeEvolution:
         :param no_generations: max amount of evolution per pair in iteration
         """
         if BridgeEvolution.bridge is not None:
-            # Run for up to 300 generations set by no_generations.
             global inputs_j
             global inputs_c
             inputs_j = [() for _ in range(len(BridgeEvolution.bridge.points))]
             inputs_c = [() for _ in range(len(BridgeEvolution.bridge.connections))]
-            # [BridgeEvolution.simulation_time, BridgeEvolution.strain, BridgeEvolution.break_moments] \
-            #    = sim.simulate(BridgeEvolution.bridge)
+            [BridgeEvolution.simulation_time, BridgeEvolution.strain, BridgeEvolution.break_moments] \
+                = sim.simulate(BridgeEvolution.bridge)
             create_inputs()
             print(inputs_c)
             print(inputs_j)
@@ -195,27 +196,77 @@ class BridgeEvolution:
             # self.winner_j = self.p_j.run(pe_j.evaluate, no_generations)
             # self.winner_c = self.p_c.run(pe_c.evaluate, no_generations)
             self.winner_j = self.p_j.run(eval_genome_j, no_generations)
-            # self.winner_c = self.p_c.run(eval_genome_c, no_generations)
 
             # Display the winning genome.
             print('\nBest genome:\n{!s}'.format(self.winner_j))
-
-            # Show output of the most fit genome against training data.
-            print('\nOutput:')
             winner_net = neat.nn.FeedForwardNetwork.create(self.winner_j, self.config_j)
-            for xi, xo in zip(inputs_j, outputs_j):
-                output = winner_net.activate(xi)
-                print("input {!r}, expected output {!r}, got {!r}".format(xi, xo, output))
+            output = [winner_net.activate(xi) for xi in inputs_j]
+            alter_bridge_j(output, BridgeEvolution.bridge)
+            BridgeEvolution.bridge.render("Train_joint.png")
+            inputs_j = [() for _ in range(len(BridgeEvolution.bridge.points))]
+            inputs_c = [() for _ in range(len(BridgeEvolution.bridge.connections))]
+            [BridgeEvolution.simulation_time, BridgeEvolution.strain, BridgeEvolution.break_moments] \
+                = sim.simulate(BridgeEvolution.bridge)
+            create_inputs()
+            with open("winner_j.pkl", "wb") as f:
+                pickle.dump(self.winner_j, f)
 
+            self.winner_c = self.p_c.run(eval_genome_c, no_generations)
             # Display the winning genome.
-            # print('\nBest genome:\n{!s}'.format(self.winner_c))
+            print('\nBest genome:\n{!s}'.format(self.winner_c))
+            winner_net = neat.nn.FeedForwardNetwork.create(self.winner_c, self.config_c)
+            output = [winner_net.activate(xi) for xi in inputs_j]
+            alter_bridge_j(output, BridgeEvolution.bridge)
+            BridgeEvolution.bridge.render("Train_connection.png")
+            with open("winner_c.pkl", "wb") as f:
+                pickle.dump(self.winner_c, f)
 
-            # Show output of the most fit genome against training data.
-            # print('\nOutput:')
-            # winner_net = neat.nn.FeedForwardNetwork.create(self.winner_c, self.config_c)
-            # for xi, xo in zip(inputs_c, outputs_c):
-            #    output = winner_net.activate(xi)
-            #    print("input {!r}, expected output {!r}, got {!r}".format(xi, xo, output))
+    def load(self):
+        with open("winner_j.pkl", "rb") as f:
+            self.winner_j = pickle.load(f)
+        with open("winner_c.pkl", "rb") as f:
+            self.winner_c = pickle.load(f)
+
+    def save(self):
+        with open("winner_j.pkl", "wb") as f:
+            pickle.dump(self.winner_j, f)
+        with open("winner_c.pkl", "wb") as f:
+            pickle.dump(self.winner_c, f)
+
+    def upgrade(self, mark: str, no_iterations: int):
+        if BridgeEvolution.bridge is not None:
+            global inputs_j
+            global inputs_c
+            inputs_j = [() for _ in range(len(BridgeEvolution.bridge.points))]
+            inputs_c = [() for _ in range(len(BridgeEvolution.bridge.connections))]
+            [BridgeEvolution.simulation_time, BridgeEvolution.strain, BridgeEvolution.break_moments] \
+                = sim.simulate(BridgeEvolution.bridge)
+            create_inputs()
+            print(inputs_c)
+            print(inputs_j)
+            global bridge_copy
+            bridge_copy = BridgeEvolution.bridge.copy()
+            for i in range(no_iterations):
+                net = neat.nn.FeedForwardNetwork.create(self.winner_j, self.config_j)
+                output = [net.activate(xi) for xi in inputs_j]
+                alter_bridge_j(output, BridgeEvolution.bridge)
+                inputs_j = [() for _ in range(len(BridgeEvolution.bridge.points))]
+                inputs_c = [() for _ in range(len(BridgeEvolution.bridge.connections))]
+                [BridgeEvolution.simulation_time, BridgeEvolution.strain, BridgeEvolution.break_moments] \
+                    = sim.simulate(BridgeEvolution.bridge)
+                create_inputs()
+            BridgeEvolution.bridge.render("Upgrade_joint_" + mark + ".png")
+
+            for i in range(no_iterations):
+                net = neat.nn.FeedForwardNetwork.create(self.winner_j, self.config_j)
+                output = [net.activate(xi) for xi in inputs_j]
+                alter_bridge_j(output, BridgeEvolution.bridge)
+                inputs_j = [() for _ in range(len(BridgeEvolution.bridge.points))]
+                inputs_c = [() for _ in range(len(BridgeEvolution.bridge.connections))]
+                [BridgeEvolution.simulation_time, BridgeEvolution.strain, BridgeEvolution.break_moments] \
+                    = sim.simulate(BridgeEvolution.bridge)
+                create_inputs()
+            BridgeEvolution.bridge.render("Upgrade_connection_" + mark + ".png")
 
 
 def create_inputs():
@@ -246,14 +297,13 @@ def create_inputs():
                        time)
 
 
-def alter_bridge_j(commands: list, bridge: Bridge):
+def alter_bridge_j(commands: list, my_bridge: Bridge):
     """
     Function that performs analysis of network solution for joints
-    :param bridge:
+    :param my_bridge: bridge to alter
     :param commands: output of network to incorporate
     :return: statistics of a new bridge
     """
-    my_bridge = bridge.copy()
     mj = []
     rj = []
     aj = []
@@ -264,21 +314,20 @@ def alter_bridge_j(commands: list, bridge: Bridge):
         if args[0] > 0.75:
             mj.append(val)
         if args[1] > 0.75:
-            val = (val[0]-removed, val[1], val[2])
+            rj.append((val[0]-removed, val[1], val[2]))
             removed += 1
-            rj.append(val)
         if args[2] > 0.75:
             aj.append(val)
         if args[3] > 0.75:
             ac.append(val)
     for c in mj:
-        nnf.moveJoint(BridgeEvolution.bridge, c[0], c[1], c[2])
+        nnf.moveJoint(my_bridge, c[0], c[1], c[2])
     for c in aj:
-        nnf.addJoint(BridgeEvolution.bridge, c[0], c[1], c[2])
+        nnf.addJoint(my_bridge, c[0], c[1], c[2])
     for c in ac:
-        nnf.addConnection(BridgeEvolution.bridge, c[0], c[1], c[2])
+        nnf.addConnection(my_bridge, c[0], c[1], c[2])
     for c in rj:
-        nnf.removeJoint(BridgeEvolution.bridge, c[0], c[1], c[2])
+        nnf.removeJoint(my_bridge, c[0], c[1], c[2])
 
     return sim.simulate(my_bridge), sum(con.cost for con in my_bridge.connections)
 
@@ -286,7 +335,7 @@ def alter_bridge_j(commands: list, bridge: Bridge):
 def eval_genome_j(genomes, config):
     """
     Scoring function for ai joint
-    :param genome: single genome
+    :param genomes: genomes list
     :param config: genome class configuration data
     :return: float genome's fitness
     """
@@ -294,9 +343,9 @@ def eval_genome_j(genomes, config):
         net = neat.nn.FeedForwardNetwork.create(genome, config)
         output = [net.activate(xi) for xi in inputs_j]
         global bridge_copy
-        [[s_t2, strain_2, _], cost_2] = alter_bridge_j(output, bridge_copy)
+        [[s_t2, strain_2, _], cost_2] = alter_bridge_j(output, bridge_copy.copy())
 
-        s2 = max(max(s) for s in strain_2)
+        s2 = max(max(s, default=0.0) for s in strain_2)
 
         # cost will be calculated later first set just survival rate
         # cost_1 = sum(con.cost for con in BridgeEvolution.bridge.connections)
@@ -304,66 +353,68 @@ def eval_genome_j(genomes, config):
         genome.fitness = s_t2 / BridgeEvolution.max_time - s2
 
 
-def alter_bridge_c(commands: list):
+def alter_bridge_c(commands: list, my_bridge: Bridge):
     """
     Function that performs analysis of network solution for connections
+    :param my_bridge: bridge to alter
     :param commands: output of network to incorporate
     :return: statistics of a new bridge
     """
-    global bridge_copy
-    my_bridge = bridge_copy.copy()
     cm = []
     rc = []
+    removed = 0
     for i, args in enumerate(commands):
         val = (i, args[-1],)
         if args[0] > 0.75:
             cm.append(val)
         if args[1] > 0.75:
-            rc.append(val)
+            rc.append((val[0]-removed, val[1]))
+            removed += 1
     for c in cm:
-        nnf.changeConnectionMaterial(BridgeEvolution.bridge, c[0], c[1])
+        nnf.changeConnectionMaterial(my_bridge, c[0], c[1])
     for c in rc:
-        nnf.removeConnection(BridgeEvolution.bridge, c[0], c[1])
+        nnf.removeConnection(my_bridge, c[0], c[1])
 
     return sim.simulate(my_bridge), sum(con.cost for con in my_bridge.connections)
 
 
-def eval_genome_c(genome, config):
+def eval_genome_c(genomes, config):
     """
     Scoring function for ai connection
-    :param genome: single genome
+    :param genomes: genomes list
     :param config: genome class configuration data
     :return: float genome's fitness
     """
-    net = neat.nn.FeedForwardNetwork.create(genome, config)
-    output = [net.activate(xi) for xi in inputs_c]
+    for genome_id, genome in genomes:
+        net = neat.nn.FeedForwardNetwork.create(genome, config)
+        output = [net.activate(xi) for xi in inputs_c]
 
-    [[s_t2, strain_2, _], cost_2] = alter_bridge_c(output)
+        [[s_t2, strain_2, _], cost_2] = alter_bridge_c(output, bridge_copy.copy())
 
-    s2 = max(max(s) for s in strain_2)
+        s2 = max(max(s) for s in strain_2)
 
-    # cost will be calculated later first set just survival rate
-    # cost_1 = sum(con.cost for con in BridgeEvolution.bridge.connections)
-    return s_t2 / BridgeEvolution.max_time - s2
+        # cost will be calculated later first set just survival rate
+        # cost_1 = sum(con.cost for con in BridgeEvolution.bridge.connections)
+        genome.fitness = s_t2 / BridgeEvolution.max_time - s2
 
 
-if __name__ == '__main__':
-    # Determine path to configuration file. This path manipulation is
-    # here so that the script will run successfully regardless of the
-    # current working directory.
-    import tbutils.materiallist as mat_list
-    import tbutils.math2d as m2
-    from tbutils.builder import Builder
+#if __name__ == '__main__':
+# Determine path to configuration file. This path manipulation is
+# here so that the script will run successfully regardless of the
+# current working directory.
+import tbutils.materiallist as mat_list
+import tbutils.math2d as m2
+from tbutils.builder import Builder
 
-    right = 300.0
-    materials = [mat_list.materialList[0],
-                 mat_list.materialList[3],
-                 mat_list.materialList[7],
-                 mat_list.materialList[19], ]
-    stat = [m2.Vector2(100.0, 250.0), m2.Vector2(right, 250.0), ]
-    bridge = Builder.buildInitial(materials, m2.Vector2(100.0, 300.0), m2.Vector2(right, 300.0), 1, stat)
-    BridgeEvolution.bridge = bridge
-    local_dir = os.path.dirname(__file__)
-    chamber = BridgeEvolution(local_dir)
-    chamber.set_reporter()
-    chamber.train(100)
+right = 300.0
+materials = [mat_list.materialList[0],
+                mat_list.materialList[3],
+                mat_list.materialList[7],
+                mat_list.materialList[19], ]
+stat = [m2.Vector2(100.0, 250.0), m2.Vector2(right, 250.0), ]
+bridge = Builder.buildInitial(materials, m2.Vector2(100.0, 300.0), m2.Vector2(right, 300.0), 1, stat)
+BridgeEvolution.bridge = bridge
+local_dir = os.path.dirname(__file__)
+chamber = BridgeEvolution(local_dir)
+chamber.set_reporter()
+chamber.train(100)

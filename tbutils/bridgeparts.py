@@ -120,7 +120,7 @@ class Connection:
             self.jointA.forces += gm + forces
             self.jointB.forces += gm - forces
 
-    def addIntertia(self):
+    def addInertia(self):
         if not self.broken:
             self.jointA.inertia += self.mass / 2
             self.jointB.inertia += self.mass / 2
@@ -225,10 +225,10 @@ class Bridge:
         k: float = 1.0
 
         if size is not None:
-            maxX: float = max(p.position.x for p in self.points if p.isStationary)
-            maxY: float = max(p.position.y for p in self.points if p.isStationary)
-            minX: float = min(p.position.x for p in self.points if p.isStationary)
-            minY: float = min(p.position.y for p in self.points if p.isStationary)
+            maxX: float = max([p.position.x for p in self.points if p.isStationary], default=0.0)
+            maxY: float = max([p.position.y for p in self.points if p.isStationary], default=0.0)
+            minX: float = min([p.position.x for p in self.points if p.isStationary], default=0.0)
+            minY: float = min([p.position.y for p in self.points if p.isStationary], default=0.0)
 
             k = min(size[0] / float(maxX - minX + epsilon), size[1] / float(maxY - minY + epsilon)) / bounds
             rx = -float(maxX + minX) / 2 + size[0] / k / 2
@@ -278,7 +278,33 @@ class Bridge:
 
     def getConnectedToJoint(self, joint):
         return [con for con in self.connections if con.jointA == joint or con.jointB == joint]
+    
+    def getKineticEnergy(self, gravity : m2.Vector2 = m2.Vector2(0, -9.81)):
+        return sum(sqr(j.velocity.length()) * j.inertia / 2 - j.position * gravity for j in self.points)
 
+    def getPotentialEnergy(self, gravity : m2.Vector2 = m2.Vector2(0, -9.81)):
+        return sum( - j.position * gravity for j in self.points)
+
+    def getEnergy(self, gravity : m2.Vector2 = m2.Vector2(0, -9.81)):
+        return self.getPotentialEnergy(gravity) + self.getKineticEnergy(gravity)
+    
+    def relaxPendulums(self, gravity : m2.Vector2 = m2.Vector2(0, -9.81)):
+        for i, j in enumerate(self.points):
+            j.indexOnBridge = i
+            j.connectionCount = 0
+                    
+        for c in self.connections:
+            c.jointA.connectionCount += 1
+            c.jointB.connectionCount += 1
+            
+        gravityTensor = gravity.normal()
+            
+        for c in self.connections:
+            if c.jointA.connectionCount == 1:
+                c.jointA.position = c.jointB.position + gravityTensor * c.length
+            if c.jointB.connectionCount == 1:
+                c.jointB.position = c.jointA.position + gravityTensor * c.length
+        
 
 class Material:
     """

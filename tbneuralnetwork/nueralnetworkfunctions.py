@@ -12,9 +12,10 @@ def moveJoint(bridge: Bridge, indexOfElement: int, valx: float, valy: float):
     :return: True if operation was possible False otherwise
     """
     # to do checks if possible and move joint and all connected beams
+    # print("mj: ", indexOfElement, len(bridge.points))
     joint = bridge.points[indexOfElement]
     connected = bridge.getConnectedToJoint(joint)
-    moveRange = sum(con.material.maxLen for con in connected) / (len(connected) * 2)
+    moveRange = sum(con.material.maxLen for con in connected) / (len(connected) * 2) if len(connected) > 0 else 50.0
     offsetx = (valx - 0.5) * moveRange
     offsety = (valy - 0.5) * moveRange
     newpos = joint.position + m2.Vector2(offsetx, offsety)
@@ -38,6 +39,7 @@ def removeJoint(bridge: Bridge, indexOfElement: int, *extra):
     :return: True if operation was possible False otherwise
     """
     # to do checks and removal of the joint and connection
+    # print("rj: ", indexOfElement, len(bridge.points))
     joint = bridge.points[indexOfElement]
     bridge.connections = [con for con in bridge.connections if con.jointA != joint and con.jointB != joint]
     bridge.points.remove(joint)
@@ -56,9 +58,10 @@ def addJoint(bridge: Bridge, indexOfElement: int, valx: float, valy: float):
     :return: True if operation was possible False otherwise
     """
     # to do checks and adding of the joint
+    # print("aj: ", indexOfElement, len(bridge.points))
     joint = bridge.points[indexOfElement]
     connected = bridge.getConnectedToJoint(joint)
-    moveRange = sum(con.material.maxLen for con in connected) / (len(connected) * 2)
+    moveRange = sum(con.material.maxLen for con in connected) / (len(connected) * 2) if len(connected) > 0 else 50.0
     offsetx = (valx - 0.5) * moveRange
     offsety = (valy - 0.5) * moveRange
     newpos = joint.position + m2.Vector2(offsetx, offsety)
@@ -78,6 +81,7 @@ def addConnection(bridge: Bridge, indexOfElement: int, valx: float, valy: float)
     :return: True if operation was possible False otherwise
     """
     # to do checks and connection of the joints
+    # print("ac: ", indexOfElement, len(bridge.points))
     joint = bridge.points[indexOfElement]
     newpos = joint.position + m2.Vector2((valx - 0.5), (valy - 0.5)) * bridge.materials[1].maxLen
     dists = [(j, (j.position - newpos).length()) for j in bridge.points if j != joint]
@@ -98,6 +102,7 @@ def changeConnectionMaterial(bridge: Bridge, indexOfElement: int, val: float):
     :return: True if operation was possible False otherwise
     """
     # to do checks and alteration of connection
+    # print("cc: ", indexOfElement, len(bridge.connections))
     con = bridge.connections[indexOfElement]
     material = bridge.materials[int(len(bridge.materials) * val)]
     if con.length <= material.maxLen:
@@ -116,5 +121,6 @@ def removeConnection(bridge: Bridge, indexOfElement: int, *extra):
     :return: True if operation was possible False otherwise
     """
     # to do checks and removal of the connection
+    # print("rc: ", indexOfElement, len(bridge.connections))
     bridge.connections.pop(indexOfElement)
     return True

@@ -146,19 +146,46 @@ def test_AISimulate():
     prevFrame = 0.0
     it = 0
     deltaTime = 1e-6
-    v = 10
+    f = 10
     
-    while v > 1e-6:# time < endTime:
+    while f > 1e-5:# time < endTime:
         deltaTime = mechanics.simulateTimeStepForAI(bridge, deltaTime)
         time += deltaTime
         it += 1
         if it % 100 == 0:
-            v = max(p.velocity.length() for p in bridge.points)
-            print(time, v)
+            f = max([j.forces.length()/j.inertia for j in bridge.points if (not j.isStationary) and (j.inertia != 0)], default=0.0)
+            print(time, '\t', f)
+            
+            
+def test_AISimulatePendulum():
+    skip = False
+    if skip:
+        return
+
+    bridge = createSampleBridgePendulum()
+    endTime = 15
+    time = 0.0
+    prevFrame = 0.0
+    it = 0
+    deltaTime = 1e-6
+    f = 10
+    
+    while f > 1e-5:# time < endTime:
+        deltaTime = mechanics.simulateTimeStepForAI(bridge, deltaTime)
+        time += deltaTime
+        it += 1
+        if it % 100 == 0:
+            f = max([j.forces.length()/j.inertia for j in bridge.points if (not j.isStationary) and (j.inertia != 0)], default=0.0)
+            print(time, '\t', f)
 
 
 def test_bridgeSurvive():
     bridge = createSampleBridge()
+    print(mechanics.checkIfBridgeWillSurvive(bridge))
+    print(max(j.velocity.length() for j in bridge.points))
+    
+def test_bridgePendulumSurvive():
+    bridge = createSampleBridgePendulum()
     print(mechanics.checkIfBridgeWillSurvive(bridge))
     print(max(j.velocity.length() for j in bridge.points))
     

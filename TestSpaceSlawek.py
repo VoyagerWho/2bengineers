@@ -5,6 +5,7 @@ import tbneuralnetwork.nueralnetworkfunctions as nnf
 import tbneuralnetwork.ai as ai
 import os
 from tbsymulator.mechanics import simulate
+from tbsymulator.mechanics import checkIfBridgeWillSurvive as check_bridge
 import tbutils.materiallist as mat_list
 import datetime
 
@@ -26,10 +27,11 @@ bridge.render("Default.png", 800, 600)
 print(datetime.datetime.now().time())
 [a, b, c] = simulate(bridge)
 print(a, b, c, sep='\n')
+# print(check_bridge(bridge))
 print(datetime.datetime.now().time())
-if __name__ == '__main__' and False:
-    ai.bridge = bridge
-    chamber = ai.BridgeEvolution(os.path.join(os.path.dirname(__file__), 'tbneuralnetwork'))
+
+if _name_ == '_main_':
+    ai.BridgeEvolution.bridge = bridge
+    chamber = ai.BridgeEvolution(os.path.join(os.path.dirname(_file_), 'tbneuralnetwork'))
     chamber.set_reporter()
     chamber.train(100)
-
