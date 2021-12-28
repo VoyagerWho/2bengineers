@@ -54,7 +54,7 @@ def simulateTimeStep(bridge, timeStep: float = 1e-6, gravity: m2.Vector2 = m2.Ve
         # delta += bridge.points[i].calcDelta(copyJoints[i])
 
         copyJoints.clear()
-        
+
     if timeStep < relaxationMode:
         for joint in bridge.points:
             joint.velocity /= 2
@@ -86,18 +86,21 @@ def simulateTimeStep(bridge, timeStep: float = 1e-6, gravity: m2.Vector2 = m2.Ve
 
     return timeStep * 2
 
-def simulateTimeStepForAI(bridge, timeStep: float = 1e-6, tol : float = 1e-3, toleranceCountDependent : float = True, gravity: m2.Vector2 = m2.Vector2(0, -9.81), relaxationValue : float = 1e-3):
-    return simulateTimeStep(bridge = bridge, timeStep = timeStep, tol = tol, toleranceCountDependent = toleranceCountDependent, gravity = gravity, resistance = 0.0, relaxationMode = relaxationValue)
 
-def checkIfBridgeWillSurvive(bridge, velocityTolerance : float = 1e-6, minTime : float = 1, maxTime : float = 1000):
-    
+def simulateTimeStepForAI(bridge, timeStep: float = 1e-6, tol: float = 1e-3, toleranceCountDependent: float = True,
+                          gravity: m2.Vector2 = m2.Vector2(0, -9.81), relaxationValue: float = 1e-3):
+    return simulateTimeStep(bridge=bridge, timeStep=timeStep, tol=tol, toleranceCountDependent=toleranceCountDependent,
+                            gravity=gravity, resistance=0.0, relaxationMode=relaxationValue)
+
+
+def checkIfBridgeWillSurvive(bridge, velocityTolerance: float = 1e-6, minTime: float = 1, maxTime: float = 1000):
     endTime = 15
     time = 0.0
     prevFrame = 0.0
     it = 0
     deltaTime = 1e-6
-    velocity : float = 0.0
-    
+    velocity: float = 0.0
+
     while time < maxTime:
         deltaTime = simulateTimeStepForAI(bridge, deltaTime)
         time += deltaTime
@@ -106,7 +109,7 @@ def checkIfBridgeWillSurvive(bridge, velocityTolerance : float = 1e-6, minTime :
                 return False
         if (time >= minTime) and (max(j.velocity.length() for j in bridge.points) <= velocityTolerance):
             return True
-    
+
     return True
 
 
@@ -125,7 +128,7 @@ def simulate(bridge, minTimeStep: float = 1e-6, maxTime: float = 5.0, timeStep: 
         if time >= next_frame:
             strains.append([con.getStrain() for con in bridge.connections])
             next_frame += interval
-            print(f'{time:0.6f}\t{max(strains[-1]):0.4f}')
+            print(f'{time:0.6f}\t{max(strains[-1], default=0.0):0.4f}')
         for i, con in enumerate(bridge.connections):
             if con.broken and break_moments[i] == -1.0:
                 break_moments[i] = time
