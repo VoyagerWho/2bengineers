@@ -116,14 +116,29 @@ def relaxBridge(bridge, initSoften: float = 1e7, accelerationTolerance: float = 
     
     while soften > 1.0 or currAcc > accelerationTolerance:                
         if (currAcc < accelerationTolerance) and soften > 1.0:
-            soften = 1.0       
-        bridge.setSoften(soften)
-        deltaTime = simulateTimeStepForAI(bridge, deltaTime, gravity=gravity, enableBreaks=False)
+            soften = 1.0    
+        #bridge.setSoften(soften)
+        if soften != 1.0:
+            for con in bridge.connections:
+                s = con.getStrain()
+                if s > 0.3:                
+                    con.soften = max(1.0, con.soften*0.9999)
+                else:
+                    con.soften = min(initSoften, con.soften*1.0001)
+        
+        if soften == 1.0:
+            for j in bridge.points:
+                j.velocity = m2.Vector2()
+        deltaTime = simulateTimeStep(bridge, deltaTime, gravity=gravity, enableBreaks=False, resistance=min(1.0, soften), relaxationMode=1e-3)
         bridge.checkFalls(gravity)
         currAcc = max([j.forces.length()/j.inertia for j in bridge.points if (not j.isStationary) and (j.inertia != 0)], default=0.0)
-        it += 1            
+        it += 1    
+        #if it%100000 == 0:
+            #for j in bridge.points:
+                #j.velocity = m2.Vector2()
         if it%1000 == 0:
             print(soften, currAcc)
+            bridge.render("/dev/shm/relax" + str(it//1000) + ".png")
             
     bridge.setSoften(1.0)
         
@@ -173,7 +188,7 @@ def simulate(bridge, minTimeStep: float = 1e-6, maxTime: float = 5.0, timeStep: 
     global frameID 
     
     print("BridgeInfo: ", len(bridge.connections), len(bridge.points))
-    #bridge.relaxPendulums(gravity)
+    bridge.relaxPendulums(gravity)
     bridge.removeFallings()
     #relaxBridge(bridge, gravity=gravity, accelerationTolerance=accelerationTolerance)
     
@@ -182,10 +197,9 @@ def simulate(bridge, minTimeStep: float = 1e-6, maxTime: float = 5.0, timeStep: 
         it += 1
         tb = getTime()
         timeStep = simulateTimeStepForAI(bridge=bridge, timeStep=timeStep, gravity=gravity, tol=tolerance, relaxationValue=relaxationValue)
-        if time > 1.0 and not relaxed: # zmiana strategii
-            print("Relaxation...")
-            relaxBridge(bridge, gravity=gravity, accelerationTolerance=accelerationTolerance)
-            relaxed = True
+        #if time > 1.0 and not relaxed: # zmiana strategii            
+            #relaxBridge(bridge, gravity=gravity, accelerationTolerance=accelerationTolerance)
+            #relaxed = True        
             
         energy = bridge.getPotentialEnergy(gravity)
         timeEfficiency = abs(prevEnergy-energy)/(getTime() - tb)
@@ -207,9 +221,11 @@ def simulate(bridge, minTimeStep: float = 1e-6, maxTime: float = 5.0, timeStep: 
         if time >= next_frame:
             strains.append([con.getStrain() for con in bridge.connections])
             next_frame += interval
+
             print("mechanics.simulate:", it, f'\t{time:0.6f}\t{max(strains[-1], default=0.0):0.4f}', "\tacc=", maxAcc, "\trelax=", relaxationValue, "\ttol=", tolerance,"\tE=", energy, "\tMinY=", min([j.position.y for j in bridge.points], default=0.0))
             bridge.render("/dev/shm/test" + str(frameID) + ".png") #remove after debug
             frameID += 1    #remove after debug
+
         for i, con in enumerate(bridge.connections):
             if con.jointA.position * gravity > gravity.length()**3:
                 con.broken = True            

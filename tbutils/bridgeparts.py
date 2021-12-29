@@ -314,7 +314,7 @@ class Bridge:
                 c.jointA.position = c.jointB.position + gravityTensor * c.length
             if c.jointB.connectionCount <= 1.01 and (not c.jointB.isStationary):
                 c.jointB.position = c.jointA.position + gravityTensor * c.length
-        
+
     def removeFallings(self):
         for j in self.points:
             j.isConnectedWithStationary = j.isStationary
@@ -332,8 +332,7 @@ class Bridge:
                         
         for con in self.connections:            
             status = con.jointA.isConnectedWithStationary or con.jointB.isConnectedWithStationary
-            con.broken = not status
-            
+            con.broken = not status                        
         
     def setSoften(self, newSoften: float):
         for con in self.connections:
@@ -343,7 +342,47 @@ class Bridge:
         for c in self.connections:
             if max(c.jointA.position * gravity, c.jointB.position * gravity) >= trigger:
                 c.broken = True                
-            
+
+    def isSemiValid(self):
+        """
+        Function that checks if there is connection between first two stationary points
+        :return: bool
+        """
+        a = None
+        b = None
+        for j in self.points:
+            if j.isStationary:
+                if a is None:
+                    a = j
+                elif b is None:
+                    b = j
+                    break
+        if a is None or b is None:
+            return False  # missing stationary points
+        connected = self.getConnectedToJoint(a)
+        curr = None
+        for c in connected:
+            if c.material == self.materials[0]:
+                curr = c.jointA if c.jointB == a else c.jointB
+                if curr == b:
+                    return True
+        if curr is None:
+            return False
+        while True:
+            temp = curr
+            curr = None
+            connected = self.getConnectedToJoint(temp)
+            for c in connected:
+                if c.material == self.materials[0]:
+                    if c.jointA != a and c.jointB != a:
+                        next_c = c.jointA if c.jointB == temp else c.jointB
+                        if next_c == b:
+                            return True
+                        a = curr
+                        curr = next_c
+            if curr is None:
+                return False
+
 
 class Material:
     """
