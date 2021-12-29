@@ -31,9 +31,10 @@ class Joint:
             self.velocity += dv
             self.velocity *= expResistance  # exp(-time * resistance)
         return self
-
+    
     def prepare(self):
-        self.forces = m2.Vector2()
+        self.forces.x = 0.0
+        self.forces.y = 0.0
         self.inertia = 0.0
 
     def assign(self, j):
@@ -49,14 +50,10 @@ class Joint:
         return c
 
     def calcDelta(self, j):
-        mv : float = (self.velocity + j.velocity).length()/2
-        mf : float = (j.velocity.length() + j.forces.length())/2
-        r : float = (self.position - j.position).length()
-        if mv > 0:
-            r += (self.velocity - j.velocity).length()/mv
-        if mf > 0:
-            r += (self.forces - j.forces).length()/mf
-        return r
+        if not self.isStationary:
+            mf : float = (self.forces.length() + j.forces.length())/2
+            return (self.forces - j.forces).length()/(mf+1.0)
+        return 0.0
 
     def __str__(self):
         return "Position = " + str(self.position) + "\tVelocity = " + str(self.velocity) + "\tForces = " + str(
@@ -75,6 +72,7 @@ class Connection:
         self.maxStretch: float = maxStretch
         self.stretchForceRate: float = stretchForceRate
         self.length = 0.0  # placeholder
+        self.soften: float = 1.0
         self.updateLength()
         self.broken = False
         self.cost = 0.0
@@ -108,9 +106,9 @@ class Connection:
         v: m2.Vector2 = (self.jointA.position - self.jointB.position)
         currentLength: float = v.length()
         if currentLength < self.length:
-            return v.normal() * (-self.compressionForceRate * (currentLength - self.length))
+            return v.normal() * (-self.compressionForceRate * (currentLength - self.length) / self.soften)
         if currentLength > self.length:
-            return v.normal() * (-self.stretchForceRate * (currentLength - self.length))
+            return v.normal() * (-self.stretchForceRate * (currentLength - self.length) / self.soften)
         return m2.Vector2()
 
     def addForces(self, gravity: m2.Vector2 = m2.Vector2()):
@@ -158,6 +156,7 @@ class Connection:
                        maxStretch=self.maxStretch, stretchForceRate=self.stretchForceRate)
         c.broken = self.broken
         c.material = self.material
+        c.soften = self.soften
         return c
 
     def breakToTwo(self, where: float = 0.5):
@@ -297,14 +296,54 @@ class Bridge:
             c.jointA.connectionCount += 1
             c.jointB.connectionCount += 1
             
+        for j in self.points:        
+            if j.connectionCount == 0:
+                j.isStationary = True
+        
+        for c1 in self.connections:
+            for c2 in self.connections:
+                if c1 != c2:
+                    if (c1.jointA.indexOnBridge == c2.jointA.indexOnBridge and c1.jointB.indexOnBridge == c2.jointB.indexOnBridge) or (c1.jointA.indexOnBridge == c2.jointB.indexOnBridge and c1.jointB.indexOnBridge == c2.jointA.indexOnBridge):
+                            c1.jointA.connectionCount -= 0.5
+                            c1.jointB.connectionCount -= 0.5
+            
         gravityTensor = gravity.normal()
             
         for c in self.connections:
-            if c.jointA.connectionCount == 1:
+            if c.jointA.connectionCount <= 1.01 and (not c.jointA.isStationary):
                 c.jointA.position = c.jointB.position + gravityTensor * c.length
-            if c.jointB.connectionCount == 1:
+            if c.jointB.connectionCount <= 1.01 and (not c.jointB.isStationary):
                 c.jointB.position = c.jointA.position + gravityTensor * c.length
         
+    def removeFallings(self):
+        for j in self.points:
+            j.isConnectedWithStationary = j.isStationary
+        
+        for i in range(len(self.connections)):
+            noFalse = True
+            for con in self.connections:
+                status = con.jointA.isConnectedWithStationary or con.jointB.isConnectedWithStationary
+                con.jointA.isConnectedWithStationary = status
+                con.jointB.isConnectedWithStationary = status
+                if not status:
+                    noFalse = False
+            if noFalse:
+                break
+                        
+        for con in self.connections:            
+            status = con.jointA.isConnectedWithStationary or con.jointB.isConnectedWithStationary
+            con.broken = not status
+            
+        
+    def setSoften(self, newSoften: float):
+        for con in self.connections:
+            con.soften = newSoften    
+            
+    def checkFalls(self, gravity, trigger: float = 1e9):
+        for c in self.connections:
+            if max(c.jointA.position * gravity, c.jointB.position * gravity) >= trigger:
+                c.broken = True                
+            
 
 class Material:
     """

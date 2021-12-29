@@ -30,8 +30,10 @@ print(a, b, c, sep='\n')
 # print(check_bridge(bridge))
 print(datetime.datetime.now().time())
 
-if _name_ == '_main_':
+if __name__ == '_main_':
     ai.BridgeEvolution.bridge = bridge
     chamber = ai.BridgeEvolution(os.path.join(os.path.dirname(_file_), 'tbneuralnetwork'))
     chamber.set_reporter()
     chamber.train(100)
+    
+    ai.BridgeEvolution.bridge.render("/dev/shm/bridge.png")

@@ -73,6 +73,20 @@ class Vector2:
             return self
         return None
 
+    def __imul__(self, v):
+        if isinstance(v, int) or isinstance(v, float):
+            self.x *= v
+            self.y *= v  
+            return self
+        return None
+    
+    def __itruediv__(self, v):
+        if isinstance(v, int) or isinstance(v, float):
+            self.x /= v
+            self.y /= v  
+            return self  
+        return None
+
     def length(self):
         return math.hypot(self.x, self.y)
 

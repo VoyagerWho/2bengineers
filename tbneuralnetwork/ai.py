@@ -399,9 +399,11 @@ def eval_genome_c(genomes, config):
 
 
 #if __name__ == '__main__':
-# Determine path to configuration file. This path manipulation is
-# here so that the script will run successfully regardless of the
-# current working directory.
+    # Determine path to configuration file. This path manipulation is
+    # here so that the script will run successfully regardless of the
+    # current working directory.
+    
+    
 import tbutils.materiallist as mat_list
 import tbutils.math2d as m2
 from tbutils.builder import Builder

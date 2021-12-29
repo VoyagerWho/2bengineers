@@ -3,7 +3,7 @@ import tbutils.bridgeparts as bridgeparts
 import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw
 from time import sleep
-
+import tbutils.materiallist as ml
 
 def test_sqr():
     assert bridgeparts.sqr(2) == 4
@@ -81,7 +81,10 @@ def createSampleBridgePendulum():
     bridge = bridgeparts.Bridge()
 
     bridge.points.append(bridgeparts.Joint([0.0, 0.0], stationary=True))
-    bridge.points.append(bridgeparts.Joint([3.5, 0.0]))
+    bridge.points.append(bridgeparts.Joint([1.81, 0.0]))
+    bridge.points.append(bridgeparts.Joint([3.6, 0.0]))
+    bridge.points.append(bridgeparts.Joint([-4.0, 0.0], stationary=True))
+    bridge.points.append(bridgeparts.Joint([4.0, 0.0], stationary=True))
 
     defMaxCompression = 0.9
     defMaxStrech = 1.1
@@ -89,9 +92,11 @@ def createSampleBridgePendulum():
     defStrechForceRate = 1e4
     defMass = 20
 
-    bridge.connections.append(
-        bridgeparts.Connection(bridge.points[0], bridge.points[1], defMass, defMaxCompression, defCompressionForceRate,
-                             defMaxStrech, defStrechForceRate))
+    bridge.connections.append(bridgeparts.Connection.makeCFM(bridge.points[0], bridge.points[1], ml.materialList[3]))
+    bridge.connections.append(bridgeparts.Connection.makeCFM(bridge.points[1], bridge.points[2], ml.materialList[3]))
+    #bridge.connections.append(
+        #bridgeparts.Connection(bridge.points[0], bridge.points[1], defMass, defMaxCompression, defCompressionForceRate,
+                             #defMaxStrech, defStrechForceRate))
 
     return bridge
 
@@ -148,7 +153,7 @@ def test_AISimulate():
     deltaTime = 1e-6
     f = 10
     
-    while f > 1e-5:# time < endTime:
+    while f > 1e-3:# time < endTime:
         deltaTime = mechanics.simulateTimeStepForAI(bridge, deltaTime)
         time += deltaTime
         it += 1
@@ -170,13 +175,14 @@ def test_AISimulatePendulum():
     deltaTime = 1e-6
     f = 10
     
-    while f > 1e-5:# time < endTime:
-        deltaTime = mechanics.simulateTimeStepForAI(bridge, deltaTime)
+    while f > 1e-3:# time < endTime:
+        deltaTime = mechanics.simulateTimeStepForAI(bridge, deltaTime, relaxationValue=0.001, tol=1e-3)
         time += deltaTime
         it += 1
-        if it % 100 == 0:
+        if it % 1000 == 0:
             f = max([j.forces.length()/j.inertia for j in bridge.points if (not j.isStationary) and (j.inertia != 0)], default=0.0)
-            print(time, '\t', f)
+            print(time, '\t', f, '\t', bridge.points[1].position.y)
+            bridge.render("/dev/shm/AISimulatePendulum"+str(it//1000)+".png")
 
 
 def test_bridgeSurvive():
@@ -208,6 +214,7 @@ def test_RenderBridge2():
     while time < endTime:
         deltaTime = mechanics.simulateTimeStep(bridge, deltaTime, tol=1e-1, resistance=0.5, realBrakes=True,
                                                toleranceCountDependent=False, relaxationMode = 0.000)
+        
         time += deltaTime
         it += 1
         # deltaTime = min(1.0/fps/2, deltaTime)
@@ -216,7 +223,7 @@ def test_RenderBridge2():
         if time >= prevFrame + 1.0 / fps:
             if trueRender:
                 bridge.render("/dev/shm/frame" + str(frameCount) + ".png")
-            print("frame: " + str(frameCount))
+            print("frame: " + str(frameCount), max(j.velocity.length() for j in bridge.points))
             frameCount += 1
             prevFrame = time
 
@@ -243,7 +250,7 @@ def test_simulation():
     strainValues = []
 
     StdOut = False
-    Plots = False
+    Plots = True
 
     PlotInterval = 0.01
 
