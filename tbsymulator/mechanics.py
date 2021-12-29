@@ -222,9 +222,7 @@ def simulate(bridge, minTimeStep: float = 1e-6, maxTime: float = 5.0, timeStep: 
             strains.append([con.getStrain() for con in bridge.connections])
             next_frame += interval
 
-            print("mechanics.simulate:", it, f'\t{time:0.6f}\t{max(strains[-1], default=0.0):0.4f}', "\tacc=", maxAcc, "\trelax=", relaxationValue, "\ttol=", tolerance,"\tE=", energy, "\tMinY=", min([j.position.y for j in bridge.points], default=0.0))
-            bridge.render("/dev/shm/test" + str(frameID) + ".png") #remove after debug
-            frameID += 1    #remove after debug
+            print("mechanics.simulate:", it, f'\t{time:0.6f}\t{max(strains[-1], default=0.0):0.4f}', "\tacc=", maxAcc, "\trelax=", relaxationValue, "\ttol=", tolerance,"\tE=", energy, "\tMinY=", min([j.position.y for j in bridge.points], default=0.0))            
 
         for i, con in enumerate(bridge.connections):
             if con.jointA.position * gravity > gravity.length()**3:
@@ -236,6 +234,8 @@ def simulate(bridge, minTimeStep: float = 1e-6, maxTime: float = 5.0, timeStep: 
             
     strains.append([con.getStrain() for con in bridge.connections])
     print("Broken: ", road_broke)
+    bridge.render("/dev/shm/test" + str(frameID) + ".png") #remove after debug
+    frameID += 1    #remove after debug
     return time, strains, break_moments
 
 
