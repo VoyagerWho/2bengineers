@@ -41,6 +41,8 @@ def removeJoint(bridge: Bridge, indexOfElement: int, *extra):
     # to do checks and removal of the joint and connection
     # print("rj: ", indexOfElement, len(bridge.points))
     joint = bridge.points[indexOfElement]
+    if joint.isStationary:
+        return False
     bridge.connections = [con for con in bridge.connections if con.jointA != joint and con.jointB != joint]
     bridge.points.remove(joint)
     return True
@@ -87,6 +89,10 @@ def addConnection(bridge: Bridge, indexOfElement: int, valx: float, valy: float)
     dists = [(j, (j.position - newpos).length()) for j in bridge.points if j != joint]
     place = min(dists, key=lambda x: x[1])
     if place[1] <= bridge.materials[1].maxLen:
+        connected = bridge.getConnectedToJoint(joint)
+        for c in connected:
+            if c.jointA == place[0] or c.jointB == place[0]:
+                return False
         bridge.connections.append(Connection.makeCFM(joint, place[0], bridge.materials[1]))
         return True
     else:

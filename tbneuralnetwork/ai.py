@@ -314,7 +314,7 @@ def alter_bridge_j(commands: list, my_bridge: Bridge):
         if args[0] > 0.75:
             mj.append(val)
         if args[1] > 0.75:
-            rj.append((val[0]-removed, val[1], val[2]))
+            rj.append((val[0] - removed, val[1], val[2]))
             removed += 1
         if args[2] > 0.75:
             aj.append(val)
@@ -329,7 +329,9 @@ def alter_bridge_j(commands: list, my_bridge: Bridge):
     for c in rj:
         nnf.removeJoint(my_bridge, c[0], c[1], c[2])
 
-    return sim.simulate(my_bridge), sum(con.cost for con in my_bridge.connections)
+    if my_bridge.isSemiValid():
+        return sim.simulate(my_bridge), sum(con.cost for con in my_bridge.connections)
+    return [0, [[-0.5]], []], sum(con.cost for con in my_bridge.connections)
 
 
 def eval_genome_j(genomes, config):
@@ -368,14 +370,16 @@ def alter_bridge_c(commands: list, my_bridge: Bridge):
         if args[0] > 0.75:
             cm.append(val)
         if args[1] > 0.75:
-            rc.append((val[0]-removed, val[1]))
+            rc.append((val[0] - removed, val[1]))
             removed += 1
     for c in cm:
         nnf.changeConnectionMaterial(my_bridge, c[0], c[1])
     for c in rc:
         nnf.removeConnection(my_bridge, c[0], c[1])
 
-    return sim.simulate(my_bridge), sum(con.cost for con in my_bridge.connections)
+    if my_bridge.isSemiValid():
+        return sim.simulate(my_bridge), sum(con.cost for con in my_bridge.connections)
+    return [0, [[-0.5]], []], sum(con.cost for con in my_bridge.connections)
 
 
 def eval_genome_c(genomes, config):
@@ -398,23 +402,23 @@ def eval_genome_c(genomes, config):
         genome.fitness = s_t2 / BridgeEvolution.max_time - s2
 
 
-#if __name__ == '__main__':
-# Determine path to configuration file. This path manipulation is
-# here so that the script will run successfully regardless of the
-# current working directory.
-import tbutils.materiallist as mat_list
-import tbutils.math2d as m2
-from tbutils.builder import Builder
+if __name__ == '__main__':
+    # Determine path to configuration file. This path manipulation is
+    # here so that the script will run successfully regardless of the
+    # current working directory.
+    import tbutils.materiallist as mat_list
+    import tbutils.math2d as m2
+    from tbutils.builder import Builder
 
-right = 300.0
-materials = [mat_list.materialList[0],
-                mat_list.materialList[3],
-                mat_list.materialList[7],
-                mat_list.materialList[19], ]
-stat = [m2.Vector2(100.0, 250.0), m2.Vector2(right, 250.0), ]
-bridge = Builder.buildInitial(materials, m2.Vector2(100.0, 300.0), m2.Vector2(right, 300.0), 1, stat)
-BridgeEvolution.bridge = bridge
-local_dir = os.path.dirname(__file__)
-chamber = BridgeEvolution(local_dir)
-chamber.set_reporter()
-chamber.train(100)
+    right = 300.0
+    materials = [mat_list.materialList[0],
+                 mat_list.materialList[3],
+                 mat_list.materialList[7],
+                 mat_list.materialList[19], ]
+    stat = [m2.Vector2(100.0, 250.0), m2.Vector2(right, 250.0), ]
+    bridge = Builder.buildInitial(materials, m2.Vector2(100.0, 300.0), m2.Vector2(right, 300.0), 1, stat)
+    BridgeEvolution.bridge = bridge
+    local_dir = os.path.dirname(__file__)
+    chamber = BridgeEvolution(local_dir)
+    chamber.set_reporter()
+    chamber.train(100)

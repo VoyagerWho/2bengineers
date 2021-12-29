@@ -174,7 +174,7 @@ def simulate(bridge, minTimeStep: float = 1e-6, maxTime: float = 5.0, timeStep: 
             strains.append([con.getStrain() for con in bridge.connections])
             next_frame += interval
             print("mechanics.simulate: " + f'{time:0.6f}\t{max(strains[-1], default=0.0):0.4f}', "\t", maxAcc, "\t", relaxationValue,"\t", energy)
-            bridge.render("/dev/shm/test"+str(getTime())+".png")
+            # bridge.render("/dev/shm/test"+str(getTime())+".png")
         for i, con in enumerate(bridge.connections):
             if con.broken and break_moments[i] == -1.0:
                 break_moments[i] = time
