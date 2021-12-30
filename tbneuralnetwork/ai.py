@@ -187,21 +187,22 @@ class BridgeEvolution:
             [BridgeEvolution.simulation_time, BridgeEvolution.strain, BridgeEvolution.break_moments] \
                 = sim.simulate(BridgeEvolution.bridge)
             create_inputs()
-            print(inputs_c)
-            print(inputs_j)
+            
+            # learning of joint:
+            
+            # print(inputs_c)
+            # print(inputs_j)
             global bridge_copy
-            bridge_copy = BridgeEvolution.bridge.copy()
-            # pe_j = neat.ParallelEvaluator(4, eval_genome_j)
-            # pe_c = neat.ParallelEvaluator(4, eval_genome_c)
-            # self.winner_j = self.p_j.run(pe_j.evaluate, no_generations)
-            # self.winner_c = self.p_c.run(pe_c.evaluate, no_generations)
-            self.winner_j = self.p_j.run(eval_genome_j, no_generations)
-
+            # bridge_copy = BridgeEvolution.bridge.copy()
+            # self.winner_j = self.p_j.run(eval_genome_j, no_generations)
+            with open("winner_j.pkl", "rb") as f:
+              self.winner_j = pickle.load(f)
             # Display the winning genome.
             print('\nBest genome:\n{!s}'.format(self.winner_j))
             winner_net = neat.nn.FeedForwardNetwork.create(self.winner_j, self.config_j)
             output = [winner_net.activate(xi) for xi in inputs_j]
             alter_bridge_j(output, BridgeEvolution.bridge)
+            bridge_copy = BridgeEvolution.bridge.copy()
             BridgeEvolution.bridge.render("Train_joint.png")
             inputs_j = [() for _ in range(len(BridgeEvolution.bridge.points))]
             inputs_c = [() for _ in range(len(BridgeEvolution.bridge.connections))]
@@ -215,8 +216,8 @@ class BridgeEvolution:
             # Display the winning genome.
             print('\nBest genome:\n{!s}'.format(self.winner_c))
             winner_net = neat.nn.FeedForwardNetwork.create(self.winner_c, self.config_c)
-            output = [winner_net.activate(xi) for xi in inputs_j]
-            alter_bridge_j(output, BridgeEvolution.bridge)
+            output = [winner_net.activate(xi) for xi in inputs_c]
+            alter_bridge_c(output, BridgeEvolution.bridge)
             BridgeEvolution.bridge.render("Train_connection.png")
             with open("winner_c.pkl", "wb") as f:
                 pickle.dump(self.winner_c, f)
@@ -331,7 +332,7 @@ def alter_bridge_j(commands: list, my_bridge: Bridge):
 
     if my_bridge.isSemiValid():
         return sim.simulate(my_bridge), sum(con.cost for con in my_bridge.connections)
-    return [0, [[-0.5]], []], sum(con.cost for con in my_bridge.connections)
+    return [0, [[0.5]], []], sum(con.cost for con in my_bridge.connections)
 
 
 def eval_genome_j(genomes, config):
@@ -352,7 +353,8 @@ def eval_genome_j(genomes, config):
         # cost will be calculated later first set just survival rate
         # cost_1 = sum(con.cost for con in BridgeEvolution.bridge.connections)
 
-        genome.fitness = s_t2 / BridgeEvolution.max_time - s2
+        # genome.fitness = s_t2 / BridgeEvolution.max_time - s2
+        genome.fitness = 1 - s2
 
 
 def alter_bridge_c(commands: list, my_bridge: Bridge):
@@ -379,7 +381,7 @@ def alter_bridge_c(commands: list, my_bridge: Bridge):
 
     if my_bridge.isSemiValid():
         return sim.simulate(my_bridge), sum(con.cost for con in my_bridge.connections)
-    return [0, [[-0.5]], []], sum(con.cost for con in my_bridge.connections)
+    return [0, [[0.5]], []], sum(con.cost for con in my_bridge.connections)
 
 
 def eval_genome_c(genomes, config):
@@ -399,7 +401,8 @@ def eval_genome_c(genomes, config):
 
         # cost will be calculated later first set just survival rate
         # cost_1 = sum(con.cost for con in BridgeEvolution.bridge.connections)
-        genome.fitness = s_t2 / BridgeEvolution.max_time - s2
+        # genome.fitness = s_t2 / BridgeEvolution.max_time - s2
+        genome.fitness = 1 - s2
 
 
 

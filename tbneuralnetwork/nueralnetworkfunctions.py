@@ -14,6 +14,8 @@ def moveJoint(bridge: Bridge, indexOfElement: int, valx: float, valy: float):
     # to do checks if possible and move joint and all connected beams
     # print("mj: ", indexOfElement, len(bridge.points))
     joint = bridge.points[indexOfElement]
+    if joint.isStationary:
+        return False
     connected = bridge.getConnectedToJoint(joint)
     moveRange = sum(con.material.maxLen for con in connected) / (len(connected) * 2) if len(connected) > 0 else 50.0
     offsetx = (valx - 0.5) * moveRange

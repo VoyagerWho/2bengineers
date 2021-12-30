@@ -359,29 +359,23 @@ class Bridge:
                     break
         if a is None or b is None:
             return False  # missing stationary points
-        connected = self.getConnectedToJoint(a)
-        curr = None
-        for c in connected:
-            if c.material == self.materials[0]:
-                curr = c.jointA if c.jointB == a else c.jointB
-                if curr == b:
-                    return True
-        if curr is None:
-            return False
-        while True:
-            temp = curr
-            curr = None
-            connected = self.getConnectedToJoint(temp)
-            for c in connected:
-                if c.material == self.materials[0]:
-                    if c.jointA != a and c.jointB != a:
-                        next_c = c.jointA if c.jointB == temp else c.jointB
-                        if next_c == b:
-                            return True
-                        a = curr
-                        curr = next_c
-            if curr is None:
+        
+        jointList = [a, b]
+        for c in self.connections:  
+            if c.material == self.materials[0]: # bierzemy te jointy, które mają połączenie z asfaltem
+                jointList.append(c.jointA)
+                jointList.append(c.jointB)
+                
+        # teraz w joint list każdy joint musi być co najmniej dwa razy 
+        # (bo każdy powinien mieć połączenie z co najmnijej dwoma asfaltami)
+        # (za wyjątkiem stacjonarnych, ale je dodaliśmy na poczatku)
+        
+        jointSet = set(jointList)
+        for j in jointList:
+            if jointList.count(j) < 2:
                 return False
+            
+        return True        
 
 
 class Material:
