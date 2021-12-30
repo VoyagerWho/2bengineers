@@ -1,7 +1,5 @@
-from math import sqrt
-from math import exp
+from math import sqrt, exp
 import tbutils.math2d as m2
-from threading import Thread
 from time import sleep, time as getTime
 
 def simulateTimeStep(bridge, timeStep: float = 1e-6, gravity: m2.Vector2 = m2.Vector2(0, -9.81),
@@ -248,77 +246,3 @@ def simulate(bridge, minTimeStep: float = 1e-6, maxTime: float = 5.0, timeStep: 
     strains.append([con.getStrain() for con in bridge.connections])
     print("Broken: ", road_broke)
     return time, strains, break_moments
-
-
-class SimulationThread(Thread):
-    
-    """
-    Simulating the bridge in another thread.
-    For constructor parameters see: simulateTimeStep
-    """
-
-    def __init__(self, bridge, timeStep: float = 1e-6, gravity: m2.Vector2 = m2.Vector2(0, -9.81),
-                 resistance: float = 1e-3, tol: float = 1e-3, realBrakes: bool = False,
-                 toleranceCountDependent: bool = False, safeBreaking: bool = False, relaxationMode: float = 0.0,
-                 makeAnimation: bool = False, animationSize: (int, int) = (640, 480), animationFPS: float = 60.0):
-        self.bridge = bridge
-        self.timeStep = timeStep
-        self.gravity = gravity
-        self.resistance = resistance
-        self.tol = tol
-        self.realBrakes = realBrakes
-        self.toleranceCountDependent = toleranceCountDependent
-        self.safeBreaking = safeBreaking
-        self.relaxationMode = relaxationMode
-
-        self.time: float = 0
-        self.running = True
-        self.pause = False
-        self.makeAnimation = makeAnimation
-        self.animation = []
-        self.animationFPS = animationFPS
-        self.animationSize = animationSize
-        self.exceptions = []
-        Thread.__init__(self)
-
-    def run(self):
-        lastFrameTime: float = 0.0
-        while self.running:
-            # print(f'Inside: {self.timeStep:0.6f}\t{self.maxSpeed():0.6f}\t{self.maxSpeedv2():0.6f}')
-            try:
-                self.timeStep = simulateTimeStep(bridge=self.bridge, timeStep=self.timeStep, gravity=self.gravity,
-                                                 resistance=self.resistance, tol=self.tol, realBrakes=self.realBrakes,
-                                                 toleranceCountDependent=self.toleranceCountDependent,
-                                                 safeBreaking=self.safeBreaking, relaxationMode=self.relaxationMode)
-                if self.makeAnimation and (self.time - lastFrameTime >= 1 / self.animationFPS):
-                    lastFrameTime = self.time;
-                    self.animation.append((self.time, self.bridge.getModelForRender(size=self.animationSize)))
-            except Exception as error:
-                self.exceptions.append(error)
-                self.pause = True
-
-            self.time += self.timeStep
-            while self.running and self.pause:
-                sleep(min(0.001, abs(1 / self.animationFPS)))
-
-    def isBroken(self):
-        for connection in self.bridge.connections:
-            if connection.broken:
-                return True
-        return False
-
-    def stopSimulation(self):
-        self.pause = False
-        self.running = False
-        self.join()
-
-    def maxSpeed(self):
-        maxV: float = 0
-        for joint in self.bridge.points:
-            v = joint.velocity.length()
-            if v > maxV:
-                maxV = v
-        return maxV
-
-    def maxSpeedv2(self):
-        return max(joint.velocity.length() for joint in self.bridge.points)

@@ -195,8 +195,8 @@ class BridgeEvolution:
             global bridge_copy
             # bridge_copy = BridgeEvolution.bridge.copy()
             # self.winner_j = self.p_j.run(eval_genome_j, no_generations)
-            with open("winner_j.pkl", "rb") as f:
-              self.winner_j = pickle.load(f)
+            with open("winner_j.pkl", "rb") as f: 
+              self.winner_j = pickle.load(f)      
             # Display the winning genome.
             print('\nBest genome:\n{!s}'.format(self.winner_j))
             winner_net = neat.nn.FeedForwardNetwork.create(self.winner_j, self.config_j)
