@@ -1,4 +1,7 @@
-import tbutils.math2d as m2
+"""
+Module defining interface to bridge for the AI
+"""
+
 from tbutils.bridgeparts import *
 
 

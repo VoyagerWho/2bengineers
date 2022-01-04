@@ -1,3 +1,9 @@
+"""
+Utility module defining all functional parts of bridge model
+Consists of classes and helper functions
+
+"""
+
 import tbutils.math2d as m2
 from math import exp
 
@@ -15,6 +21,9 @@ def inStrongRange(x, lo, hi):
 
 
 class Joint:
+    """
+    Class representing joint which is an ending point of the connection beam
+    """
 
     def __init__(self, position: m2.Vector2, stationary: bool = False):
         self.position: m2.Vector2 = m2.Vector2(position)
@@ -61,6 +70,9 @@ class Joint:
 
 
 class Connection:
+    """
+    Class representing beams/connections of the bridge
+    """
 
     def __init__(self, jointA: Joint, jointB: Joint, mass: float, maxCompression: float, compressionForceRate: float,
                  maxStretch: float, stretchForceRate: float):
@@ -91,6 +103,7 @@ class Connection:
     def makeCFM(jointA: Joint, jointB: Joint, material):
         """
         makeConnectionFromMaterial
+        Static method to construct connection based on ending points and material
         :param jointA: First point of connection
         :param jointB: Second point of connection
         :param material: Material used for connection
@@ -170,15 +183,33 @@ class Connection:
         return j1, j2, c1, c2
 
     def addCost(self, cost: float):
+        """
+        Method to alter value of cost attribute of the connection
+        :param cost: new cost value
+        """
+
         self.cost = cost
 
     def update(self):
+        """
+        Utility method to update length dependant attributes
+        """
+
         self.length = (self.jointA.position - self.jointB.position).length()
         self.mass = self.length * self.material.linDen
         self.cost = self.length * self.material.cost
 
 
 class Bridge:
+    """
+    Class representing model of the bridge
+
+    Note: A valid material list consist of at least two materials
+       where: 0 - road material
+              1 - main structure material
+            ... - other support materials
+    Road materials at different indexes will not be recognised as valid road material
+    """
 
     def __init__(self):
         self.points = []
@@ -267,15 +298,32 @@ class Bridge:
         image.save(fileName)
 
     def updateAll(self):
+        """
+        Utility method to call update method on every connection of the bridge
+        """
+
         for con in self.connections:
             con.update()
 
     def updateOnJoint(self, joint):
+        """
+        Utility method to all update method on every connection of the bridge
+        with specified ending point
+        :param joint: ending point of the connections
+        """
+
         for con in self.connections:
             if con.jointA == joint or con.jointB == joint:
                 con.update()
 
     def getConnectedToJoint(self, joint):
+        """
+        Method to acquire every connection of the bridge
+        with specified ending point
+        :param joint: ending point of the connections
+        :return: list of connections
+        """
+
         return [con for con in self.connections if con.jointA == joint or con.jointB == joint]
     
     def getKineticEnergy(self, gravity : m2.Vector2 = m2.Vector2(0, -9.81)):

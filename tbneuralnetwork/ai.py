@@ -6,7 +6,7 @@ Two main networks:
 """
 from __future__ import print_function
 import os
-import random
+import math
 
 import neat
 import tbsymulator.mechanics as sim
@@ -64,82 +64,13 @@ bridge_copy: Bridge = None
 class BridgeEvolution:
     """
     Main class for evolving the bridge structure
-    Requires a bridge to unlock train method for objects and max time of the simulation
+    Requires a bridge to unlock train method for objects
     """
     # For simulations
     bridge: Bridge = None
-    max_time: float = 1.0
-    simulation_time: float = 0.4812591086981626
-    strain: list = [[0.004533949416271299, 0.0030095314519843104, 0.0030095313315609364, 0.004533949264157258,
-                     1.7983723581654047e-05,
-                     1.0051729701032907e-05, 1.2754077468888418e-05, 2.663413402523579e-05, 1.2754117866427984e-05,
-                     1.0051705423665378e-05, 1.7983745024554325e-05, 2.0921826956373023e-05, 2.0161516776682714e-05,
-                     2.0161551474397698e-05, 2.092181077414152e-05, 5.705436569762145e-06, 5.705436569762145e-06,
-                     5.705436569762145e-06, 5.705436569762145e-06, 5.705436569762145e-06, 5.705436569762145e-06,
-                     5.705436569762145e-06,
-                     5.705436569762145e-06],
-                    [0.0029921245279054946, 0.001914378818114876, 0.0019143790086581889, 0.0029921246371913102,
-                     1.246924519059753e-05,
-                     7.481056043111782e-06, 8.957061761975516e-06, 1.928606825775552e-05, 8.95703445479252e-06,
-                     7.481061015116652e-06,
-                     1.246918507653572e-05, 1.640677426236943e-05, 1.5695120176589882e-05, 1.5695054130505503e-05,
-                     1.6406821755337227e-05, 9.482435702999895e-05, 9.482435702999895e-05, 9.482427748135502e-05,
-                     9.482427748135502e-05, 9.482447678316891e-05, 9.482447678316891e-05, 9.482444428320671e-05,
-                     9.482444428320671e-05],
-                    [5.844251557449152e-05, 0.00014164988350460637, 0.00014164974326472815, 5.8442586462587986e-05,
-                     1.596511656656051e-06, 2.1364662197076269e-07, 2.16386705507609e-06, 6.8108397197947e-06,
-                     2.1638930415702923e-06,
-                     2.1355829119674882e-07, 1.5962858407338244e-06, 9.396930571636463e-06, 2.2881446531397014e-06,
-                     2.288274223890989e-06, 9.39669513898469e-06, 0.0006413290422238066, 0.0006413290422238066,
-                     0.0006412866007148161,
-                     0.0006412866007148161, 0.0006413373299879319, 0.0006413373299879319, 0.0006412949625913703,
-                     0.0006412949625913703],
-                    [0.00492379841863334, 0.003019252237069202, 0.0030192545113941834, 0.004923798564840039,
-                     4.244645515853236e-05,
-                     1.3566068480302162e-05, 2.147437321353058e-05, 2.3698917073424554e-05, 2.147403608829414e-05,
-                     1.3565952182000755e-05, 4.244508769302297e-05, 1.1354795992765884e-05, 3.7723413872815296e-05,
-                     3.7723032047418096e-05, 1.1354421769254179e-05, 0.026468019928843737, 0.026468019928843737,
-                     0.02649211555650789,
-                     0.02649211555650789, 0.026467742757159556, 0.026467742757159556, 0.026491838161430466,
-                     0.026491838161430466],
-                    [0.000885617282388216, 0.0002141359681386719, 0.00021413654586599634, 0.0008856171066448103,
-                     0.00015883864836764073, 3.554005247669802e-05, 6.569780189039814e-05, 0.0001664263816354229,
-                     6.569677808467663e-05, 3.553898302952557e-05, 0.0001588333754845216, 7.316451629771628e-07,
-                     2.2561482305341823e-05, 2.2561437898287943e-05, 7.345660181297683e-07, 1, 1, 1, 1, 1, 1, 1, 1],
-                    [0.0007826163096344068, 0.0001033758811733617, 0.00010335949749715247, 0.0007826159138425349,
-                     0.00025393638340009603, 6.971623713317607e-05, 6.779582985120816e-05, 0.0003057155529861735,
-                     6.779978142976597e-05, 6.972149312498021e-05, 0.0002539587341853766, 9.908132002719909e-05,
-                     3.4495345640979265e-05, 3.4494066943626016e-05, 9.90706598881159e-05, 1, 1, 1, 1, 1, 1, 1, 1],
-                    [0.005135008896565864, 0.003222050879619629, 0.003222005255928808, 0.005134999258738415,
-                     0.007455741521484531,
-                     0.0019440526699596508, 0.002532297289102921, 0.008933529865243215, 0.0025323121899684525,
-                     0.0019440751189889194,
-                     0.007455834780133065, 0.0016923022756087413, 0.001018365418966027, 0.0010183569275846627,
-                     0.001692260304055965, 1,
-                     1, 1, 1, 1, 1, 1, 1],
-                    [0.0006654477393902604, 0.001194082465795061, 0.0011942716844507671, 0.0006654991096308363,
-                     0.009740285300848413,
-                     0.0026068231857466363, 0.0031473511734264707, 0.011312428917050013, 0.00314740916195811,
-                     0.002606917956704177,
-                     0.009740666880955894, 0.0033256708984653826, 0.0001917336831162207, 0.00019172621313472878,
-                     0.003325472777372944,
-                     1, 1, 1, 1, 1, 1, 1, 1],
-                    [0.01173912593500031, 0.010404694411234894, 0.01040555644137685, 0.01173927556648044,
-                     0.3105507450284876,
-                     0.08169746550006869, 0.10407397524778711, 0.36606580348720325, 0.10407373108047438,
-                     0.08169706369588539,
-                     0.3105491476094635, 0.08038350542630497, 0.030108747614121984, 0.030108907274265052,
-                     0.08038421101186577, 1, 1, 1,
-                     1, 1, 1, 1, 1],
-                    [0.25752836391808004, 1, 1, 0.25752755681722717, 1, 0.05723257852481457, 0.04559988427093752, 1,
-                     0.04560034627098954, 0.057231783299714324, 1, 0.195030100555172, 0.1583861091626705,
-                     0.15838514649816424, 0.1950298037523481, 1, 1, 1, 1, 1, 1, 1, 1]]
-    break_moments: list = [-1.0, 0.4812591086981626, 0.4812591086981626, -1.0, 0.4796887283105269, -1.0, -1.0,
-                           0.47414034419585516, -1.0,
-                           -1.0, 0.4796887283105269, -1.0, -1.0, -1.0, -1.0, 0.2382945933263878, 0.2382945933263878,
-                           0.23844122081355923,
-                           0.23844122081355923, 0.2382945933263878, 0.2382945933263878, 0.23844122081355923,
-                           0.23844122081355923]
+    budget: float = 0.0
+    strain: list = []
+    break_moments: list = []
 
     def __init__(self, path_to_catalog: str):
         """
@@ -187,16 +118,16 @@ class BridgeEvolution:
             [BridgeEvolution.simulation_time, BridgeEvolution.strain, BridgeEvolution.break_moments] \
                 = sim.simulate(BridgeEvolution.bridge)
             create_inputs()
-            
+            BridgeEvolution.budget = 1.1*sum(con.cost for con in BridgeEvolution.bridge.connections)
             # learning of joint:
             
             # print(inputs_c)
             # print(inputs_j)
             global bridge_copy
-            # bridge_copy = BridgeEvolution.bridge.copy()
-            # self.winner_j = self.p_j.run(eval_genome_j, no_generations)
-            with open("winner_j.pkl", "rb") as f: 
-              self.winner_j = pickle.load(f)      
+            bridge_copy = BridgeEvolution.bridge.copy()
+            self.winner_j = self.p_j.run(eval_genome_j, no_generations)
+            # with open("winner_j.pkl", "rb") as f:
+            #   self.winner_j = pickle.load(f)
             # Display the winning genome.
             print('\nBest genome:\n{!s}'.format(self.winner_j))
             winner_net = neat.nn.FeedForwardNetwork.create(self.winner_j, self.config_j)
@@ -235,6 +166,12 @@ class BridgeEvolution:
             pickle.dump(self.winner_c, f)
 
     def upgrade(self, mark: str, no_iterations: int):
+        """
+        Method performing evaluation of the bridge by both networks
+        :param mark: signature of the result files
+        :param no_iterations: number of updates per network
+        """
+
         if BridgeEvolution.bridge is not None:
             global inputs_j
             global inputs_c
@@ -243,6 +180,7 @@ class BridgeEvolution:
             [BridgeEvolution.simulation_time, BridgeEvolution.strain, BridgeEvolution.break_moments] \
                 = sim.simulate(BridgeEvolution.bridge)
             create_inputs()
+            BridgeEvolution.budget = 1.1 * sum(con.cost for con in BridgeEvolution.bridge.connections)
             print(inputs_c)
             print(inputs_j)
             global bridge_copy
@@ -268,6 +206,19 @@ class BridgeEvolution:
                     = sim.simulate(BridgeEvolution.bridge)
                 create_inputs()
             BridgeEvolution.bridge.render("Upgrade_connection_" + mark + ".png")
+
+
+def score(max_strain: float, cost: float):
+    """
+
+    :param max_strain: maximum value of strain in simulation
+    :param cost: cost of the structure
+    :return: float: score of the model
+    """
+    cost_offset = 0.5 * math.atan(0.01 * (BridgeEvolution.budget - cost)) / math.pi
+    if bridge.isSemiValid():
+        return 1 - max_strain**2 + cost_offset
+    return 0.5 + cost_offset
 
 
 def create_inputs():
@@ -330,9 +281,7 @@ def alter_bridge_j(commands: list, my_bridge: Bridge):
     for c in rj:
         nnf.removeJoint(my_bridge, c[0], c[1], c[2])
 
-    if my_bridge.isSemiValid():
-        return sim.simulate(my_bridge), sum(con.cost for con in my_bridge.connections)
-    return [0, [[0.5]], []], sum(con.cost for con in my_bridge.connections)
+    return sim.simulate(my_bridge), sum(con.cost for con in my_bridge.connections)
 
 
 def eval_genome_j(genomes, config):
@@ -354,7 +303,7 @@ def eval_genome_j(genomes, config):
         # cost_1 = sum(con.cost for con in BridgeEvolution.bridge.connections)
 
         # genome.fitness = s_t2 / BridgeEvolution.max_time - s2
-        genome.fitness = 1 - s2
+        genome.fitness = score(s2, cost_2)
 
 
 def alter_bridge_c(commands: list, my_bridge: Bridge):
@@ -379,9 +328,7 @@ def alter_bridge_c(commands: list, my_bridge: Bridge):
     for c in rc:
         nnf.removeConnection(my_bridge, c[0], c[1])
 
-    if my_bridge.isSemiValid():
-        return sim.simulate(my_bridge), sum(con.cost for con in my_bridge.connections)
-    return [0, [[0.5]], []], sum(con.cost for con in my_bridge.connections)
+    return sim.simulate(my_bridge), sum(con.cost for con in my_bridge.connections)
 
 
 def eval_genome_c(genomes, config):
@@ -402,8 +349,7 @@ def eval_genome_c(genomes, config):
         # cost will be calculated later first set just survival rate
         # cost_1 = sum(con.cost for con in BridgeEvolution.bridge.connections)
         # genome.fitness = s_t2 / BridgeEvolution.max_time - s2
-        genome.fitness = 1 - s2
-
+        genome.fitness = score(s2, cost_2)
 
 
 if __name__ == '__main__':
