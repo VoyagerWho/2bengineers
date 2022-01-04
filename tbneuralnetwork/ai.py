@@ -208,7 +208,7 @@ class BridgeEvolution:
             BridgeEvolution.bridge.render("Upgrade_connection_" + mark + ".png")
 
 
-def score(max_strain: float, cost: float):
+def score(bridge: Bridge, max_strain: float, cost: float):
     """
 
     :param max_strain: maximum value of strain in simulation
@@ -281,7 +281,10 @@ def alter_bridge_j(commands: list, my_bridge: Bridge):
     for c in rj:
         nnf.removeJoint(my_bridge, c[0], c[1], c[2])
 
-    return sim.simulate(my_bridge), sum(con.cost for con in my_bridge.connections)
+    [_, strain_2, _] = sim.simulate(my_bridge)
+    s = max(max(s, default=0.0) for s in strain_2)
+    cost = sum(con.cost for con in my_bridge.connections)
+    return score(my_bridge, s, cost)
 
 
 def eval_genome_j(genomes, config):
@@ -294,16 +297,7 @@ def eval_genome_j(genomes, config):
     for genome_id, genome in genomes:
         net = neat.nn.FeedForwardNetwork.create(genome, config)
         output = [net.activate(xi) for xi in inputs_j]
-        global bridge_copy
-        [[s_t2, strain_2, _], cost_2] = alter_bridge_j(output, bridge_copy.copy())
-
-        s2 = max(max(s, default=0.0) for s in strain_2)
-
-        # cost will be calculated later first set just survival rate
-        # cost_1 = sum(con.cost for con in BridgeEvolution.bridge.connections)
-
-        # genome.fitness = s_t2 / BridgeEvolution.max_time - s2
-        genome.fitness = score(s2, cost_2)
+        genome.fitness = alter_bridge_j(output, bridge_copy.copy())
 
 
 def alter_bridge_c(commands: list, my_bridge: Bridge):
@@ -328,7 +322,10 @@ def alter_bridge_c(commands: list, my_bridge: Bridge):
     for c in rc:
         nnf.removeConnection(my_bridge, c[0], c[1])
 
-    return sim.simulate(my_bridge), sum(con.cost for con in my_bridge.connections)
+    [_, strain_2, _] = sim.simulate(my_bridge)
+    s = max(max(s, default=0.0) for s in strain_2)
+    cost = sum(con.cost for con in my_bridge.connections)
+    return score(my_bridge, s, cost)
 
 
 def eval_genome_c(genomes, config):
@@ -341,15 +338,7 @@ def eval_genome_c(genomes, config):
     for genome_id, genome in genomes:
         net = neat.nn.FeedForwardNetwork.create(genome, config)
         output = [net.activate(xi) for xi in inputs_c]
-
-        [[s_t2, strain_2, _], cost_2] = alter_bridge_c(output, bridge_copy.copy())
-
-        s2 = max(max(s) for s in strain_2)
-
-        # cost will be calculated later first set just survival rate
-        # cost_1 = sum(con.cost for con in BridgeEvolution.bridge.connections)
-        # genome.fitness = s_t2 / BridgeEvolution.max_time - s2
-        genome.fitness = score(s2, cost_2)
+        genome.fitness = alter_bridge_c(output, bridge_copy.copy())
 
 
 if __name__ == '__main__':
