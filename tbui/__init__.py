@@ -1,3 +1,3 @@
-import ui;
+import ui
 
 ui.ui()

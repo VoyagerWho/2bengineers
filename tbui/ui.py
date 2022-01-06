@@ -1,58 +1,74 @@
+import threading
+
+from tbneuralnetwork import ai
 from tbutils.builder import Builder
 import tbutils.math2d as m2d
 from vpython import *
-import tbneuralnetwork.nueralnetworkfunctions as nnf
+import os
 
 canvasWidth = 1600
 canvasHeight = 480
-pickingPoints = True
+picking_points = True
 numberOfStaticPoints = 0
 staticPoints = []
 generatedCurves = []
 
-def stopPickingPoints(b):
-    global pickingPoints
-    pickingPoints = False
-    if pickingPoints:
-        b.text = "Click here if you already picked points"
-    else:
-        b.text = "Points picked, making calculations"
 
-def deletePoints(b):
+def stop_picking_points(b):
+    if len(staticPoints) >= 2:
+        global picking_points
+        picking_points = False
+        if picking_points:
+            b.text = "Build initial (pick at least 2 points)"
+        else:
+            b.text = "Points picked, making calculations"
+
+
+def delete_points(b):
     global staticPoints
     print("staticPoints")
     print(staticPoints)
-    numberOfSphere = len(staticPoints)
-    print("numberOfSphere")
-    print(numberOfSphere)
-    for i in range(0, numberOfSphere, 1):
+    number_of_sphere = len(staticPoints)
+    print("number_of_sphere")
+    print(number_of_sphere)
+    for i in range(0, number_of_sphere, 1):
         staticPoints[0].visible = False
         del staticPoints[0]
 
     print("after delete: ")
     print(staticPoints)
 
-def deleteCurves():
+
+def delete_curves():
     global generatedCurves
-    numberOfCurves = len(generatedCurves)
-    for i in range(0, numberOfCurves, 1):
+    number_of_curves = len(generatedCurves)
+    for i in range(0, number_of_curves, 1):
         generatedCurves[0].visible = False
         del generatedCurves[0]
     # print("after delete: ")
     # print(generatedCurves)
 
+
+def async_crazy_stuff():
+    chamber2 = ai.BridgeEvolution((os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'tbneuralnetwork'))))
+    chamber2.load()
+    chamber2.upgrade("what_should_I_type_in_here", 200)
+
+
 def ui():
-    global pickingPoints, staticPoints
+    t1 = threading.Thread(target=async_crazy_stuff)
+    global picking_points, staticPoints
 
     point1 = None
     point2 = None
-    addedStaticPoints = []
+    added_static_points = []
 
     scene = canvas(width=canvasWidth, height=canvasHeight,
                    center=vector(canvasWidth / 2.0, canvasHeight / 2.0, 0), background=color.white,
                    resizable=False)
-    button(text="Click here if you already picked points", bind=stopPickingPoints)
-    button(text="Delete points", bind=deletePoints)
+    materials = Builder.createMaterialsList()
+    button(text="Build initial (pick at least 2 points)", bind=stop_picking_points)
+    button(text="Delete points", bind=delete_points)
 
     title = "Click and drag the mouse to insert static point."
     scene.title = title
@@ -64,7 +80,7 @@ def ui():
     s = None
 
     def grab(evt):
-        if pickingPoints:
+        if picking_points:
             nonlocal s, drag
             scene.title = 'Drag the point'
             drag = True
@@ -74,9 +90,8 @@ def ui():
             print(evt.pos)
             print(evt.pos.x)
 
-
     def move(evt):
-        if pickingPoints:
+        if picking_points:
             nonlocal drag
             if drag:
                 s.pos = scene.mouse.pos  # evt.pos
@@ -84,7 +99,7 @@ def ui():
                 print(s.pos.x)
 
     def drop(evt):
-        if pickingPoints:
+        if picking_points:
             nonlocal drag
             scene.title = title
             s.color = color.cyan
@@ -94,7 +109,7 @@ def ui():
             print(s.pos.x)
             print(evt.pos.x)
 
-    def pickLines(bridge):
+    def pick_lines(bridge):
         l = []
         for connection in bridge.connections:
             if not connection.broken:
@@ -103,7 +118,8 @@ def ui():
                           connection.getStrain()))
         return l
 
-    def showBridge(bridge, l):
+    def show_bridge(bridge, l):
+        print("SHOW BRIDGE")
         for ln in l:
             list_of_points = []
             list_of_points.append(vector(ln[0], ln[1], 0))
@@ -115,7 +131,7 @@ def ui():
     scene.bind('mousemove', move)
     scene.bind('mouseup', drop)
 
-    while pickingPoints:
+    while picking_points:
         rate(10)
 
     print(staticPoints)
@@ -126,113 +142,40 @@ def ui():
     if len(staticPoints) > 2:
         it = 0
         while it < len(staticPoints)-2:
-            addedStaticPoints.append(m2d.Vector2(staticPoints[it].pos.x, staticPoints[it].pos.y))
+            added_static_points.append(m2d.Vector2(staticPoints[it].pos.x, staticPoints[it].pos.y))
             it = it+1
 
-    numberOfExtraStaticPoints = len(staticPoints)-2
-    pickingPoints = False
+    number_of_extra_static_points = len(staticPoints)-2
 
-    print("pickingPoints")
-    print(pickingPoints)
-
-    materials = Builder.createMaterialsList()
     print("Arguments passed to the function: ")
     print(point1)
     print(point2)
 
     if len(staticPoints) == 2:
-        print("inside else")
         bridge = Builder.buildInitial(materials, point1, point2)
-        print("after1")
     elif len(staticPoints) > 2:
-        print("inside else")
-        print(numberOfExtraStaticPoints)
-        print(addedStaticPoints)
-        print(addedStaticPoints[0].x)
-        print(addedStaticPoints[0].y)
-        bridge = Builder.buildInitial(materials, point1, point2, numberOfExtraStaticPoints, addedStaticPoints)
-        print("after2")
+        print(number_of_extra_static_points)
+        print(added_static_points)
+        print(added_static_points[0].x)
+        print(added_static_points[0].y)
+        bridge = Builder.buildInitial(materials, point1, point2, number_of_extra_static_points, added_static_points)
 
-    l = pickLines(bridge)
-
-    # p = list(bridge.points)
+    picked_lines = pick_lines(bridge)
 
     scene.center = vector(canvasWidth / 2.0, canvasHeight / 2.0, 0)
     scene.camera.axis.z = 900
-    showBridge(bridge, l)
+    show_bridge(bridge, picked_lines)
+    ai.BridgeEvolution.bridge = bridge
 
-    # below - functionality demo
-    sleep(2)
-    print("changeConnectionMaterial")
-    nnf.changeConnectionMaterial(bridge, 10, 0.1)
-    l = pickLines(bridge)
-    deleteCurves()
-    showBridge(bridge, l)
+    ai.BridgeEvolution.upgrade_still_running = True
+    t1.start()
+    number = 0
 
-    sleep(1)
-    print("removeConnection")
-    nnf.removeConnection(bridge, 7, 0.3)
-    l = pickLines(bridge)
-    deleteCurves()
-    showBridge(bridge, l)
-
-    sleep(1)
-    print("removeJoint")
-    nnf.removeJoint(bridge, 8, 0.3, 0.6)
-    l = pickLines(bridge)
-    deleteCurves()
-    showBridge(bridge, l)
-
-    sleep(1)
-    print("removeJoint")
-    nnf.removeJoint(bridge, 4, 0.3, 0.6)
-    l = pickLines(bridge)
-    deleteCurves()
-    showBridge(bridge, l)
-
-    sleep(1)
-    print("addJoint")
-    nnf.addJoint(bridge, 10, 0.5, 0.1)
-    l = pickLines(bridge)
-    deleteCurves()
-    showBridge(bridge, l)
-
-    sleep(1)
-    print("addJoint")
-    nnf.addJoint(bridge, 12, 0.5, 0.1)
-    l = pickLines(bridge)
-    deleteCurves()
-    showBridge(bridge, l)
-
-    sleep(1)
-    print("moveJoint")
-    nnf.moveJoint(bridge, 6, 0.3, 0.6)
-    l = pickLines(bridge)
-    deleteCurves()
-    showBridge(bridge, l)
-
-    sleep(1)
-    print("moveJoint")
-    nnf.moveJoint(bridge, 7, 0.3, 0.6)
-    l = pickLines(bridge)
-    deleteCurves()
-    showBridge(bridge, l)
-
-    sleep(1)
-    print("moveJoint")
-    nnf.moveJoint(bridge, 10, 0.3, 0.6)
-    l = pickLines(bridge)
-    deleteCurves()
-    showBridge(bridge, l)
-
-    sleep(1)
-    print("addConnection")
-    nnf.addConnection(bridge, 3, 0.9, 0.3)
-    nnf.addConnection(bridge, 2, 0.9, 0.3)
-    nnf.addConnection(bridge, 1, 0.9, 0.3)
-    nnf.addConnection(bridge, 4, 0.9, 0.3)
-    l = pickLines(bridge)
-    deleteCurves()
-    showBridge(bridge, l)
+    while ai.BridgeEvolution.upgrade_still_running:
+        picked_lines = pick_lines(bridge)
+        delete_curves()
+        show_bridge(ai.BridgeEvolution.bridge, picked_lines)
+        number = number+1
+        rate(1)
 
     print("END")
