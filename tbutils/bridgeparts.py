@@ -77,6 +77,7 @@ class Connection:
         self.broken = False
         self.cost = 0.0
         self.material = None
+        self.additionalMass = 0.0
 
     def __str__(self):
         return "Joints: [" + str(self.jointA) + ", " + str(self.jointB) + "]\tMass=" + str(
@@ -114,14 +115,14 @@ class Connection:
     def addForces(self, gravity: m2.Vector2 = m2.Vector2()):
         if not self.broken:
             forces: m2.Vector2 = self.getForce()
-            gm: m2.Vector2 = gravity * (self.mass / 2)
+            gm: m2.Vector2 = gravity * ((self.mass + self.additionalMass) / 2)
             self.jointA.forces += gm + forces
             self.jointB.forces += gm - forces
 
     def addInertia(self):
         if not self.broken:
-            self.jointA.inertia += self.mass / 2
-            self.jointB.inertia += self.mass / 2
+            self.jointA.inertia += (self.mass + self.additionalMass) / 2
+            self.jointB.inertia += (self.mass + self.additionalMass) / 2
 
     def getStrain(self):  # do animacji
         if self.broken:
@@ -157,6 +158,7 @@ class Connection:
         c.broken = self.broken
         c.material = self.material
         c.soften = self.soften
+        c.additionalMass = self.additionalMass
         return c
 
     def breakToTwo(self, where: float = 0.5):
@@ -180,10 +182,11 @@ class Connection:
 
 class Bridge:
 
-    def __init__(self):
+    def __init__(self, roadStrains : float = 0.0): # road strains in kg per meter
         self.points = []
         self.connections = []
         self.materials = []
+        self.roadStrains = roadStrains
 
     def copy(self):
         b = Bridge()
@@ -341,13 +344,24 @@ class Bridge:
     def checkFalls(self, gravity, trigger: float = 1e9):
         for c in self.connections:
             if max(c.jointA.position * gravity, c.jointB.position * gravity) >= trigger:
-                c.broken = True                
+                c.broken = True      
+                
+    def addAdditionalMassToConnections(self):
+        for con in self.connections:
+            if con.material == self.materials[0]:
+                con.additionalMass = con.length * self.roadStrains
+            else:
+                con.additionalMass = 0.0                
 
     def isSemiValid(self):
         """
         Function that checks if there is connection between first two stationary points
+        And it also checks additiona strains on roads
         :return: bool
         """
+        
+        self.addAdditionalMassToConnections()
+        
         a = None
         b = None
         for j in self.points:
