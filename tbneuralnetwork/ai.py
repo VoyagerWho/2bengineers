@@ -71,6 +71,7 @@ class BridgeEvolution:
     budget: float = 0.0
     strain: list = []
     break_moments: list = []
+    upgrade_still_running = False
 
     def __init__(self, path_to_catalog: str):
         """
@@ -171,6 +172,7 @@ class BridgeEvolution:
         :param mark: signature of the result files
         :param no_iterations: number of updates per network
         """
+        BridgeEvolution.upgrade_still_running = True
 
         if BridgeEvolution.bridge is not None:
             global inputs_j
@@ -206,6 +208,8 @@ class BridgeEvolution:
                     = sim.simulate(BridgeEvolution.bridge)
                 create_inputs()
             BridgeEvolution.bridge.render("Upgrade_connection_" + mark + ".png")
+
+        BridgeEvolution.upgrade_still_running = False
 
 
 def score(bridge: Bridge, max_strain: float, cost: float):
