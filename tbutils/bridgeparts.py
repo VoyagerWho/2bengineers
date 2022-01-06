@@ -220,8 +220,8 @@ class Bridge:
         self.roadStrains = roadStrains
 
     def copy(self):
-        b = Bridge()
-        b.materials = self.materials
+        b = Bridge(roadStrains=self.roadStrains)
+        b.materials = self.materials.copy()
 
         for i, p in enumerate(self.points):
             p.indexOnBridge = i
