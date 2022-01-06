@@ -12,7 +12,7 @@ picking_points = True
 numberOfStaticPoints = 0
 staticPoints = []
 generatedCurves = []
-
+static_load = 2000
 
 def stop_picking_points(b):
     if len(staticPoints) >= 2:
@@ -52,13 +52,19 @@ def delete_curves():
 def async_crazy_stuff():
     chamber2 = ai.BridgeEvolution((os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'tbneuralnetwork'))))
     chamber2.load()
-    chamber2.upgrade("what_should_I_type_in_here", 200)
+    chamber2.upgrade("what_should_I_type_in_here", 1)
 
+def add_static_load(wi):
+    global static_load
+    print("STATIC LOAD")
+    print(static_load)
+    static_load = wi.text
 
 def ui():
     t1 = threading.Thread(target=async_crazy_stuff)
     global picking_points, staticPoints
 
+    bridge = None
     point1 = None
     point2 = None
     added_static_points = []
@@ -69,6 +75,9 @@ def ui():
     materials = Builder.createMaterialsList()
     button(text="Build initial (pick at least 2 points)", bind=stop_picking_points)
     button(text="Delete points", bind=delete_points)
+    wtext(text="Static load: ")
+    winput(text="", bind=add_static_load, width=300)
+    wtext(text=" kg per meter")
 
     title = "Click and drag the mouse to insert static point."
     scene.title = title
@@ -153,12 +162,14 @@ def ui():
 
     if len(staticPoints) == 2:
         bridge = Builder.buildInitial(materials, point1, point2)
+        bridge.roadStrains = static_load
     elif len(staticPoints) > 2:
         print(number_of_extra_static_points)
         print(added_static_points)
         print(added_static_points[0].x)
         print(added_static_points[0].y)
         bridge = Builder.buildInitial(materials, point1, point2, number_of_extra_static_points, added_static_points)
+        bridge.roadStrains = static_load
 
     picked_lines = pick_lines(bridge)
 
