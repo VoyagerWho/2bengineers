@@ -2,6 +2,8 @@ from math import sqrt, exp
 import tbutils.math2d as m2
 from time import sleep, time as getTime
 
+it = 0
+
 def simulateTimeStep(bridge, timeStep: float = 1e-6, gravity: m2.Vector2 = m2.Vector2(0, -9.81),
                      resistance: float = 1e-3, tol: float = 1e-3, realBrakes: bool = False,
                      toleranceCountDependent: bool = False, safeBreaking: bool = False, relaxationMode: float = 0.0, enableBreaks: bool = True):
@@ -185,6 +187,7 @@ def simulate(bridge, minTimeStep: float = 1e-6, maxTime: float = 5.0, timeStep: 
     prevEnergy = energy
     tolerance = 0.05
     #relaxed = False
+    global it
     it = 0
     
     print("BridgeInfo: ", len(bridge.connections), len(bridge.points))

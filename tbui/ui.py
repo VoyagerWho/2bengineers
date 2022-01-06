@@ -1,6 +1,7 @@
 import threading
 
 from tbneuralnetwork import ai
+from tbsymulator import mechanics
 from tbutils.builder import Builder
 import tbutils.math2d as m2d
 from vpython import *
@@ -45,7 +46,7 @@ def delete_curves():
 def async_crazy_stuff():
     chamber2 = ai.BridgeEvolution((os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'tbneuralnetwork'))))
     chamber2.load()
-    chamber2.upgrade("what_should_I_type_in_here", 1)
+    chamber2.upgrade("", 1)
 
 
 def add_static_load(wi):
@@ -85,7 +86,7 @@ def ui():
     radio_strain = radio(bind=change_way_to_present_bridge, text="Show strain", i=0, natural=False)
     radio_natural = radio(bind=change_way_to_present_bridge, text="Show used materials\n\n", i=1, natural=True)
     radio_buttons = [radio_strain, radio_natural]
-
+    wtext_status = wtext(text="\n\nStatus: picking points ")
     title = "Click and drag the mouse to insert static point."
     scene.title = title
 
@@ -187,9 +188,11 @@ def ui():
     ai.BridgeEvolution.bridge = bridge
     ai.BridgeEvolution.upgrade_still_running = True
     t1.start()
-
+    wtext_status.text = "Status: simulation in progres."
     while ai.BridgeEvolution.upgrade_still_running:
+        wtext_status.text = "Status: simulation in progres. Already done %d simulations" % mechanics.it
         show_bridge(ai.BridgeEvolution.bridge)
-        rate(1)
+        rate(5)
 
+    wtext_status.text = "Status: simulation ended"
     print("END")
