@@ -13,6 +13,8 @@ numberOfStaticPoints = 0
 staticPoints = []
 generatedCurves = []
 static_load = 2000
+show_natural = True
+
 
 def stop_picking_points(b):
     if len(staticPoints) >= 2:
@@ -26,17 +28,10 @@ def stop_picking_points(b):
 
 def delete_points(b):
     global staticPoints
-    print("staticPoints")
-    print(staticPoints)
     number_of_sphere = len(staticPoints)
-    print("number_of_sphere")
-    print(number_of_sphere)
     for i in range(0, number_of_sphere, 1):
         staticPoints[0].visible = False
         del staticPoints[0]
-
-    print("after delete: ")
-    print(staticPoints)
 
 
 def delete_curves():
@@ -45,8 +40,6 @@ def delete_curves():
     for i in range(0, number_of_curves, 1):
         generatedCurves[0].visible = False
         del generatedCurves[0]
-    # print("after delete: ")
-    # print(generatedCurves)
 
 
 def async_crazy_stuff():
@@ -54,11 +47,12 @@ def async_crazy_stuff():
     chamber2.load()
     chamber2.upgrade("what_should_I_type_in_here", 1)
 
+
 def add_static_load(wi):
     global static_load
-    print("STATIC LOAD")
-    print(static_load)
+    print("STATIC LOAD: %d", static_load)
     static_load = wi.text
+
 
 def ui():
     t1 = threading.Thread(target=async_crazy_stuff)
@@ -69,15 +63,28 @@ def ui():
     point2 = None
     added_static_points = []
 
+    def change_way_to_present_bridge(b):
+        global show_natural
+        if b.checked:
+            print("CHANGE WAY TO PRESENT BRIDGE!")
+            show_natural = b.natural
+        for i in range(len(radio_buttons)):
+            if i != b.i:
+                radio_buttons[i].checked = False
+
     scene = canvas(width=canvasWidth, height=canvasHeight,
                    center=vector(canvasWidth / 2.0, canvasHeight / 2.0, 0), background=color.white,
                    resizable=False)
     materials = Builder.createMaterialsList()
+    wtext(text="\n\nMenu: \n\n")
     button(text="Build initial (pick at least 2 points)", bind=stop_picking_points)
     button(text="Delete points", bind=delete_points)
-    wtext(text="Static load: ")
+    wtext(text="\n\nStatic load: ")
     winput(text="", bind=add_static_load, width=300)
-    wtext(text=" kg per meter")
+    wtext(text=" kg per meter\n\n")
+    radio_strain = radio(bind=change_way_to_present_bridge, text="Show strain", i=0, natural=False)
+    radio_natural = radio(bind=change_way_to_present_bridge, text="Show used materials\n\n", i=1, natural=True)
+    radio_buttons = [radio_strain, radio_natural]
 
     title = "Click and drag the mouse to insert static point."
     scene.title = title
@@ -95,17 +102,12 @@ def ui():
             drag = True
             s = sphere(pos=evt.pos, radius=2, color=color.red)
             staticPoints.append(s)
-            print("grab ")
-            print(evt.pos)
-            print(evt.pos.x)
 
     def move(evt):
         if picking_points:
             nonlocal drag
             if drag:
                 s.pos = scene.mouse.pos  # evt.pos
-                print("move")
-                print(s.pos.x)
 
     def drop(evt):
         if picking_points:
@@ -114,27 +116,43 @@ def ui():
             s.color = color.cyan
             drag = False
             s.pos = scene.mouse.pos
-            print("DROP")
-            print(s.pos.x)
-            print(evt.pos.x)
 
     def pick_lines(bridge):
-        l = []
+        lines = []
         for connection in bridge.connections:
             if not connection.broken:
-                l.append((connection.jointA.position.x, connection.jointA.position.y,
+                lines.append((connection.jointA.position.x, connection.jointA.position.y,
                           connection.jointB.position.x, connection.jointB.position.y,
-                          connection.getStrain()))
-        return l
+                          connection.getStrain(), connection.material))
+        return lines
 
-    def show_bridge(bridge, l):
+    def show_bridge(bridge):
+        picked_lines = pick_lines(bridge)
+        delete_curves()
         print("SHOW BRIDGE")
-        for ln in l:
+        for ln in picked_lines:
             list_of_points = []
             list_of_points.append(vector(ln[0], ln[1], 0))
             list_of_points.append(vector(ln[2], ln[3], 0))
-            c = curve(pos=list_of_points, color=color.red)
-            generatedCurves.append(c)
+            if show_natural:
+                param = vec(0, 1, 0)
+                rad = 2
+                if ln[5].name == "Asphalt Road":
+                    param = vec(0.2, 0.2, 0.2)
+                    rad = 3
+                elif ln[5].name == "Steel Beam":
+                    param = vec(0.55, 0.55, 0.55)
+                    rad = 1
+                elif ln[5].name == "Wooden Beam":
+                    param = vec(0.6, 0.25, 0.02)
+                    rad = 2
+
+                c = curve(pos=list_of_points, color=param, radius=rad)
+                generatedCurves.append(c)
+            else:
+                print("HERE: %5.2f %5.2f" % (ln[4], 1.0-ln[4]))
+                c = curve(pos=list_of_points, color=vec(ln[4], 1.0-ln[4], ln[4]), radius=1.5)
+                generatedCurves.append(c)
 
     scene.bind('mousedown', grab)
     scene.bind('mousemove', move)
@@ -156,37 +174,22 @@ def ui():
 
     number_of_extra_static_points = len(staticPoints)-2
 
-    print("Arguments passed to the function: ")
-    print(point1)
-    print(point2)
-
     if len(staticPoints) == 2:
         bridge = Builder.buildInitial(materials, point1, point2)
         bridge.roadStrains = static_load
     elif len(staticPoints) > 2:
-        print(number_of_extra_static_points)
-        print(added_static_points)
-        print(added_static_points[0].x)
-        print(added_static_points[0].y)
         bridge = Builder.buildInitial(materials, point1, point2, number_of_extra_static_points, added_static_points)
         bridge.roadStrains = static_load
 
-    picked_lines = pick_lines(bridge)
-
     scene.center = vector(canvasWidth / 2.0, canvasHeight / 2.0, 0)
     scene.camera.axis.z = 900
-    show_bridge(bridge, picked_lines)
+    show_bridge(bridge)
     ai.BridgeEvolution.bridge = bridge
-
     ai.BridgeEvolution.upgrade_still_running = True
     t1.start()
-    number = 0
 
     while ai.BridgeEvolution.upgrade_still_running:
-        picked_lines = pick_lines(bridge)
-        delete_curves()
-        show_bridge(ai.BridgeEvolution.bridge, picked_lines)
-        number = number+1
+        show_bridge(ai.BridgeEvolution.bridge)
         rate(1)
 
     print("END")
