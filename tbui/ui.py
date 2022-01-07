@@ -15,7 +15,7 @@ staticPoints = []
 # for double bridge
 generatedCurves1 = []
 generatedCurves2 = []
-
+generatedRoad = []
 generatedPoints = []
 static_load = 2000
 show_natural = True
@@ -65,6 +65,14 @@ def delete_curves_2():
     #     del generatedPoints[0]
 
 
+def delete_road():
+    global generatedRoad
+    number_of_boxes = len(generatedRoad)
+    for i in range(0, number_of_boxes, 1):
+        generatedRoad[0].visible = False
+        del generatedRoad[0]
+
+
 def async_crazy_stuff():
     chamber2 = ai.BridgeEvolution((os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'tbneuralnetwork'))))
     chamber2.load()
@@ -96,7 +104,7 @@ def ui():
                 radio_buttons[i].checked = False
 
     scene = canvas(width=canvasWidth, height=canvasHeight,
-                   center=vector(canvasWidth / 2.0, canvasHeight / 2.0, 0), background=color.white,
+                   center=vector(canvasWidth / 2.0, canvasHeight / 2.0, 0), background=vec(0.9, 0.9, 1),
                    resizable=False)
     materials = Builder.createMaterialsList()
     wtext(text="\n\nMenu: \n\n")
@@ -161,6 +169,7 @@ def ui():
         # picked_points = pick_points(bridge)
         if version == 1:
             delete_curves_1()
+            delete_road()
         else:
             delete_curves_2()
 
@@ -175,6 +184,26 @@ def ui():
                 if ln[5].name == "Asphalt Road":
                     param = vec(0.2, 0.2, 0.2)
                     rad = 3
+                    if version == 1:
+                        if ln[0] < ln[2]:
+                            road_posX = ln[0]
+                        else:
+                            road_posX = ln[2]
+
+                        if ln[1] < ln[3]:
+                            road_posY = ln[1]
+                        else:
+                            road_posY = ln[3]
+
+                        road_length_x = abs(ln[2] - ln[0])
+                        road_length_y = abs(ln[3] - ln[1])
+                        road_position_x = road_length_x / 2 + road_posX
+                        road_position_y = road_length_y / 2 + road_posY
+                        road_box_width = sqrt(road_length_x * road_length_x + road_length_y * road_length_y)
+                        road = box(pos=vec(road_position_x, road_position_y, 0), length=100, height=2,
+                                   width=road_box_width, axis=vec(road_length_x, road_length_y, 0), color=param)
+                        generatedRoad.append(road)
+
                 elif ln[5].name == "Steel Beam":
                     param = vec(0.55, 0.55, 0.55)
                     rad = 1
@@ -265,7 +294,7 @@ def ui():
              [-length_x - 1000, -length_y - depth], [1000, -length_y - depth], [1000, 0]])
 
     terrain_path = [vec(position_x, position_y, 0),
-                    vec(position_x, position_y, 200)]
+                    vec(position_x, position_y, 1000)]
 
     scene.center = vector(canvasWidth / 2.0, canvasHeight / 2.0, 0)
     scene.camera.axis.z = 900
@@ -284,6 +313,7 @@ def ui():
 
     terrain.pos = vec(position_x, position_y - depth / 2, 0)
     terrain.color = vec(0.6, 0.25, 0.02)
+
     terrain.visible = True
     ai.BridgeEvolution.bridge = bridge_obj
     ai.BridgeEvolution.upgrade_still_running = True
@@ -297,7 +327,7 @@ def ui():
         show_double_bridge(ai.BridgeEvolution.bridge)
         print(scene.center)
         # print(scene.position)
-        rate(5)
+        rate(1)
 
     wtext_status.text = "Status: simulation ended"
     print("END")
