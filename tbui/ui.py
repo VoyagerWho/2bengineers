@@ -81,7 +81,7 @@ def async_crazy_stuff():
 
 def add_static_load(wi):
     global static_load
-    
+
     print("STATIC LOAD (old): %d", static_load)
     try:
         static_load = float(wi.text)
@@ -200,10 +200,10 @@ def ui():
                         else:
                             road_posY = ln[3]
 
-                        road_length_x = abs(ln[2] - ln[0])
-                        road_length_y = abs(ln[3] - ln[1])
-                        road_position_x = road_length_x / 2 + road_posX
-                        road_position_y = road_length_y / 2 + road_posY
+                        road_length_x = ln[2] - ln[0]
+                        road_length_y = ln[3] - ln[1]
+                        road_position_x = abs(road_length_x) / 2 + road_posX
+                        road_position_y = abs(road_length_y) / 2 + road_posY
                         road_box_width = sqrt(road_length_x * road_length_x + road_length_y * road_length_y)
                         road = box(pos=vec(road_position_x, road_position_y, 0), length=100, height=2,
                                    width=road_box_width, axis=vec(road_length_x, road_length_y, 0), color=param)
@@ -257,7 +257,7 @@ def ui():
     if len(staticPoints) > 2:
         it = 0
         while it < len(staticPoints) - 2:
-            added_static_points.append(m2d.Vector2(staticPoints[it].pos.x, staticPoints[it].pos.y))
+            added_static_points.append(m2d.Vector2(staticPoints[it + 2].pos.x, staticPoints[it + 2].pos.y))
             it = it + 1
 
     number_of_extra_static_points = len(staticPoints) - 2
@@ -265,9 +265,11 @@ def ui():
     if len(staticPoints) == 2:
         bridge_obj = Builder.buildInitial(materials, point1, point2)
         bridge_obj.roadStrains = static_load
+        bridge_obj.render("renderCheck.png")
     elif len(staticPoints) > 2:
         bridge_obj = Builder.buildInitial(materials, point1, point2, number_of_extra_static_points, added_static_points)
         bridge_obj.roadStrains = static_load
+        bridge_obj.render("renderCheck.png")
 
     print("%f %f %f %f %f %f", staticPoints[0].pos.x, staticPoints[0].pos.y, staticPoints[1].pos.x,
           staticPoints[1].pos.y)
@@ -334,5 +336,9 @@ def ui():
         # print(scene.position)
         rate(1)
 
-    wtext_status.text = "Status: simulation ended"
+    if mechanics.road_broke:
+        wtext_status.text = "Status: simulation ended, bridge broken"
+    else:
+        wtext_status.text = "Status: bridge simulation completed successfully, bridge stable"
+
     print("END")

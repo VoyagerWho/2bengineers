@@ -3,6 +3,7 @@ import tbutils.math2d as m2
 from time import sleep, time as getTime
 
 executedSimulation: int = 0
+road_broke = False
 
 def simulateTimeStep(bridge, timeStep: float = 1e-6, gravity: m2.Vector2 = m2.Vector2(0, -9.81),
                      resistance: float = 1e-3, tol: float = 1e-3, realBrakes: bool = False,
@@ -174,6 +175,7 @@ frameID = 0 #remove after debug
 def simulate(bridge, minTimeStep: float = 1e-6, maxTime: float = 5.0,
              interval: float = 0.05, gravity: m2.Vector2 = m2.Vector2(0, -9.81), accelerationTolerance : float = 1e-2, minTolerance : float = 1e-3):
     print("Starting new simulation")
+    global road_broke
     time = 0
     strains = []
     break_moments = [-1.0 for _ in range(len(bridge.connections))]
