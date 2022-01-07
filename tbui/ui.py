@@ -12,7 +12,11 @@ canvasHeight = 480
 picking_points = True
 numberOfStaticPoints = 0
 staticPoints = []
-generatedCurves = []
+# for double bridge
+generatedCurves1 = []
+generatedCurves2 = []
+
+generatedPoints = []
 static_load = 2000
 show_natural = True
 
@@ -35,12 +39,30 @@ def delete_points(b):
         del staticPoints[0]
 
 
-def delete_curves():
-    global generatedCurves
-    number_of_curves = len(generatedCurves)
+def delete_curves_1():
+    global generatedCurves1, generatedPoints
+    number_of_curves = len(generatedCurves1)
+    number_of_points = len(generatedPoints)
     for i in range(0, number_of_curves, 1):
-        generatedCurves[0].visible = False
-        del generatedCurves[0]
+        generatedCurves1[0].visible = False
+        del generatedCurves1[0]
+
+    # for i in range(0, number_of_points, 1):
+    #     generatedPoints[0].visible = False
+    #     del generatedPoints[0]
+
+
+def delete_curves_2():
+    global generatedCurves2, generatedPoints
+    number_of_curves = len(generatedCurves2)
+    number_of_points = len(generatedPoints)
+    for i in range(0, number_of_curves, 1):
+        generatedCurves2[0].visible = False
+        del generatedCurves2[0]
+
+    # for i in range(0, number_of_points, 1):
+    #     generatedPoints[0].visible = False
+    #     del generatedPoints[0]
 
 
 def async_crazy_stuff():
@@ -59,7 +81,7 @@ def ui():
     t1 = threading.Thread(target=async_crazy_stuff)
     global picking_points, staticPoints
 
-    bridge = None
+    bridge_obj = None
     point1 = None
     point2 = None
     added_static_points = []
@@ -131,17 +153,22 @@ def ui():
         points = []
         for point in bridge.points:
             print(point)
-            points.append(point)
+            points.append(point.copy())
         return points
 
-    def show_bridge(bridge):
+    def show_bridge(bridge, position_z, version):
         picked_lines = pick_lines(bridge)
-        delete_curves()
+        # picked_points = pick_points(bridge)
+        if version == 1:
+            delete_curves_1()
+        else:
+            delete_curves_2()
+
         print("SHOW BRIDGE")
         for ln in picked_lines:
             list_of_points = []
-            list_of_points.append(vector(ln[0], ln[1], 0))
-            list_of_points.append(vector(ln[2], ln[3], 0))
+            list_of_points.append(vector(ln[0], ln[1], position_z))
+            list_of_points.append(vector(ln[2], ln[3], position_z))
             if show_natural:
                 param = vec(0, 1, 0)
                 rad = 2
@@ -156,12 +183,30 @@ def ui():
                     rad = 2
 
                 c = curve(pos=list_of_points, color=param, radius=rad)
-                generatedCurves.append(c)
+                if version == 1:
+                    generatedCurves1.append(c)
+                else:
+                    generatedCurves2.append(c)
+
             else:
-                print("HERE: %5.2f %5.2f" % (ln[4], 1.0 - ln[4]))
-                print(list_of_points)
                 c = curve(pos=list_of_points, color=vec(ln[4], 1.0 - ln[4], ln[4]), radius=1.5)
-                generatedCurves.append(c)
+                if version == 1:
+                    generatedCurves1.append(c)
+                else:
+                    generatedCurves2.append(c)
+
+        # Picking points is right now too slow
+        # p1_shape = shapes.circle(radius=5)
+        # for p in picked_points:
+        #     p1_path = [vec(p.position[0], p.position[1], 0),
+        #                    vec(p.position[0], p.position[1], 2)]
+        #
+        #     p1 = extrusion(path=p1_path, shape=p1_shape, color=vec(0.2, 0.2, 0.2))
+        #     generatedPoints.append(p1)
+
+    def show_double_bridge(bridge):
+        show_bridge(bridge, -50, 1)
+        show_bridge(bridge, 50, 2)
 
     scene.bind('mousedown', grab)
     scene.bind('mousemove', move)
@@ -184,11 +229,11 @@ def ui():
     number_of_extra_static_points = len(staticPoints) - 2
 
     if len(staticPoints) == 2:
-        bridge = Builder.buildInitial(materials, point1, point2)
-        bridge.roadStrains = static_load
+        bridge_obj = Builder.buildInitial(materials, point1, point2)
+        bridge_obj.roadStrains = static_load
     elif len(staticPoints) > 2:
-        bridge = Builder.buildInitial(materials, point1, point2, number_of_extra_static_points, added_static_points)
-        bridge.roadStrains = static_load
+        bridge_obj = Builder.buildInitial(materials, point1, point2, number_of_extra_static_points, added_static_points)
+        bridge_obj.roadStrains = static_load
 
     print("%f %f %f %f %f %f", staticPoints[0].pos.x, staticPoints[0].pos.y, staticPoints[1].pos.x,
           staticPoints[1].pos.y)
@@ -212,46 +257,46 @@ def ui():
     position_x = length_x / 2 + posX
     position_y = length_y / 2 + posY
 
-    # terrain_shape = shapes.points(
-    #     pos=[[length_x, length_y], [length_x, length_y + 200], [0, length_y + 200], [0, 0]])
-
     depth = 400
 
     terrain_shape = shapes.points(
-        pos=[[0, 0], [0, length_y + 200], [length_x, length_y + 200], [length_x, length_y], [length_x + 1000, length_y],
-             [length_x + 1000, length_y + depth], [-1000, length_y + depth], [-1000, 0]])
+        pos=[[0, 0], [0, -length_y - 200], [-length_x, -length_y - 200], [-length_x, -length_y],
+             [-length_x - 1000, -length_y],
+             [-length_x - 1000, -length_y - depth], [1000, -length_y - depth], [1000, 0]])
 
     terrain_path = [vec(position_x, position_y, 0),
-                    vec(position_x, position_y, depth/2)]
-
-    terrain = extrusion(path=terrain_path, shape=terrain_shape)
-
-    sleep(1)
-    terrain.rotate(angle=pi, axis=vec(position_x, 0, 0))
-
-    if staticPoints[0].pos.y > staticPoints[1].pos.y and staticPoints[0].pos.x < staticPoints[1].pos.x:
-        terrain.rotate(angle=pi, axis=vec(0, position_y, 0))
-
-    # terrain.rotate(angle=pi, axis=vec(0, position_y, 0))
-    # terrain.rotate(angle=pi, axis=vec(position_x, 0, 0))
-    # terrain.rotate(angle=pi, axis=vec(0, position_y, 0))
-
-    terrain.pos = vec(position_x, position_y - depth/2, 0)
-    terrain.color = color.red
+                    vec(position_x, position_y, 200)]
 
     scene.center = vector(canvasWidth / 2.0, canvasHeight / 2.0, 0)
     scene.camera.axis.z = 900
-    pick_points(bridge)
-    show_bridge(bridge)
-    ai.BridgeEvolution.bridge = bridge
+    show_double_bridge(bridge_obj)
+    scene.autoscale = False
+    terrain = extrusion(path=terrain_path, shape=terrain_shape, visible=False)
+    # terrain.rotate(angle=pi, axis=vec(position_x, 0, 0))
+    print("POINTS: ")
+    print(staticPoints[0].pos)
+    print(staticPoints[1].pos)
+
+    if (staticPoints[0].pos.x < staticPoints[1].pos.x) and (staticPoints[0].pos.y < staticPoints[1].pos.y):
+        terrain.rotate(angle=pi, axis=vec(0, position_y, 0))
+    elif (staticPoints[1].pos.x < staticPoints[0].pos.x) and (staticPoints[1].pos.y < staticPoints[0].pos.y):
+        terrain.rotate(angle=pi, axis=vec(0, position_y, 0))
+
+    terrain.pos = vec(position_x, position_y - depth / 2, 0)
+    terrain.color = vec(0.6, 0.25, 0.02)
+    terrain.visible = True
+    ai.BridgeEvolution.bridge = bridge_obj
     ai.BridgeEvolution.upgrade_still_running = True
 
     t1.start()
     wtext_status.text = "Status: simulation in progres."
-
+    scene.axis = vector(-0.449187, -0.572867, -0.685605)
+    scene.center = vector(position_x, position_y, 0)
     while ai.BridgeEvolution.upgrade_still_running:
         wtext_status.text = "Status: simulation in progres. Already done %d simulations" % mechanics.it
-        show_bridge(ai.BridgeEvolution.bridge)
+        show_double_bridge(ai.BridgeEvolution.bridge)
+        print(scene.center)
+        # print(scene.position)
         rate(5)
 
     wtext_status.text = "Status: simulation ended"
