@@ -92,11 +92,11 @@ def createSampleBridgePendulum():
     defStrechForceRate = 1e4
     defMass = 20
 
-    bridge.connections.append(bridgeparts.Connection.makeCFM(bridge.points[0], bridge.points[1], ml.materialList[3]))
-    bridge.connections.append(bridgeparts.Connection.makeCFM(bridge.points[1], bridge.points[2], ml.materialList[3]))
-    #bridge.connections.append(
-        #bridgeparts.Connection(bridge.points[0], bridge.points[1], defMass, defMaxCompression, defCompressionForceRate,
-                             #defMaxStrech, defStrechForceRate))
+    #bridge.connections.append(bridgeparts.Connection.makeCFM(bridge.points[0], bridge.points[1], ml.materialList[3]))
+    #bridge.connections.append(bridgeparts.Connection.makeCFM(bridge.points[1], bridge.points[2], ml.materialList[3]))
+    bridge.connections.append(
+        bridgeparts.Connection(bridge.points[0], bridge.points[1], defMass, defMaxCompression, defCompressionForceRate,
+                             defMaxStrech, defStrechForceRate))
 
     return bridge
 
@@ -302,22 +302,3 @@ def test_simulation():
         fig.legend()
         fig.savefig("/dev/shm/StrainVsVelocity.png")
 
-
-
-def test_AsyncRenderBridge2():
-    skip = False 
-    trueRender = True
-    if skip:
-        return
-
-    bridge = createSampleBridge()
-
-    simulation = mechanics.SimulationThread(bridge, timeStep = 1e-6, tol=1e-3, resistance=0.5, realBrakes=True, toleranceCountDependent=True)
-    simulation.start()
-    while simulation.time < 5:
-        print("Async t =", simulation.time)
-        sleep(0.4)
-    
-    simulation.stopSimulation()
-    
-    print("done")
