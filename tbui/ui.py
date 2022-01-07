@@ -81,8 +81,13 @@ def async_crazy_stuff():
 
 def add_static_load(wi):
     global static_load
-    print("STATIC LOAD: %d", static_load)
-    static_load = wi.text
+    
+    print("STATIC LOAD (old): %d", static_load)
+    try:
+        static_load = float(wi.text)
+    except:
+        static_load = 0.0
+    print("STATIC LOAD (new): %d", static_load)
 
 
 def ui():
@@ -323,7 +328,7 @@ def ui():
     scene.axis = vector(-0.449187, -0.572867, -0.685605)
     scene.center = vector(position_x, position_y, 0)
     while ai.BridgeEvolution.upgrade_still_running:
-        wtext_status.text = "Status: simulation in progres. Already done %d simulations" % mechanics.it
+        wtext_status.text = "Status: simulation in progres. Already done %d simulations" % mechanics.executedSimulation
         show_double_bridge(ai.BridgeEvolution.bridge)
         print(scene.center)
         # print(scene.position)

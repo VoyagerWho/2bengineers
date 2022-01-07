@@ -2,7 +2,7 @@ from math import sqrt, exp
 import tbutils.math2d as m2
 from time import sleep, time as getTime
 
-it = 0
+executedSimulation: int = 0
 
 def simulateTimeStep(bridge, timeStep: float = 1e-6, gravity: m2.Vector2 = m2.Vector2(0, -9.81),
                      resistance: float = 1e-3, tol: float = 1e-3, realBrakes: bool = False,
@@ -171,8 +171,8 @@ def checkIfBridgeWillSurvive(bridge, accelerationTolerance: float = 1e-3, minTim
 
 frameID = 0 #remove after debug
 
-def simulate(bridge, minTimeStep: float = 1e-6, maxTime: float = 5.0, timeStep: float = 1e-6,
-             interval: float = 0.05, gravity: m2.Vector2 = m2.Vector2(0, -9.81), accelerationTolerance : float = 1e-3, minTolerance : float = 1e-3):
+def simulate(bridge, minTimeStep: float = 1e-6, maxTime: float = 5.0,
+             interval: float = 0.05, gravity: m2.Vector2 = m2.Vector2(0, -9.81), accelerationTolerance : float = 1e-2, minTolerance : float = 1e-3):
     print("Starting new simulation")
     time = 0
     strains = []
@@ -187,7 +187,8 @@ def simulate(bridge, minTimeStep: float = 1e-6, maxTime: float = 5.0, timeStep: 
     prevEnergy = energy
     tolerance = 0.05
     #relaxed = False
-    global it
+    global executedSimulation
+    executedSimulation += 1
     it = 0
     
     print("BridgeInfo: ", len(bridge.connections), len(bridge.points))
@@ -198,6 +199,7 @@ def simulate(bridge, minTimeStep: float = 1e-6, maxTime: float = 5.0, timeStep: 
     global frameID 
     # bridge.render("/dev/shm/test" + str(frameID) + "a.png") #remove after debug
     frameID += 1    #remove after debug
+    timeStep: float = 1e-6
     
     while not road_broke and maxAcc > accelerationTolerance:# time < maxTime:
         
