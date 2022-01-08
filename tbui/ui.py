@@ -20,6 +20,7 @@ generatedCurves2 = []
 generatedRoad = []
 generatedPoints = []
 generatedTerrain = []
+generatedExtraPoles = []
 static_load = 2000
 show_natural = True
 run_showing_bridge_next_steps = True
@@ -119,6 +120,15 @@ def delete_terrain():
         generatedTerrain[0].visible = False
         del generatedTerrain[0]
 
+
+def delete_extra_poles():
+    global generatedExtraPoles
+    number_of_stuff = len(generatedExtraPoles)
+    for i in range(0, number_of_stuff, 1):
+        generatedExtraPoles[0].visible = False
+        del generatedExtraPoles[0]
+
+
 def async_crazy_stuff():
     chamber2 = ai.BridgeEvolution((os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'tbneuralnetwork'))))
     chamber2.load()
@@ -135,6 +145,7 @@ def add_static_load(wi):
         static_load = 0.0
     print("STATIC LOAD (new): %d", static_load)
 
+
 def clear_my_scene():
     global run_showing_bridge_next_steps
     run_showing_bridge_next_steps = False
@@ -143,6 +154,7 @@ def clear_my_scene():
     delete_curves_2()
     delete_points()
     delete_terrain()
+    delete_extra_poles()
 
 
 def ui():
@@ -178,7 +190,6 @@ def ui():
         picking_points = True
         start_everything()
 
-
     scene = canvas(width=canvasWidth, height=canvasHeight,
                    center=vector(canvasWidth / 2.0, canvasHeight / 2.0, 0), background=vec(0.9, 0.9, 1),
                    resizable=False)
@@ -203,8 +214,6 @@ def ui():
 
     drag = True
     s = None
-    print("scene axis: ")
-    print(scene.axis)
 
     def grab(evt):
         if picking_points:
@@ -240,8 +249,7 @@ def ui():
     def pick_points(bridge):
         points = []
         for point in bridge.points:
-            print(point)
-            points.append(point.copy())
+            points.append(point)
         return points
 
     def show_bridge(bridge, position_z, version):
@@ -422,14 +430,35 @@ def ui():
         wtext_status.text = "\n\nStatus: simulation in progres."
         scene.axis = vector(-0.449187, -0.572867, -0.685605)
         scene.center = vector(position_x, position_y, 0)
-        i = 0
+        over_bridge_level = 200
         run_showing_bridge_next_steps = True
         while run_showing_bridge_next_steps:
-            i = i + 1
             wtext_progress.text = "\n\nProgress: already done %d simulations" % mechanics.executedSimulation
             show_double_bridge(ai.BridgeEvolution.bridge)
-            print(scene.center)
-            # print(scene.position)
+            delete_extra_poles()
+            if number_of_extra_static_points > 0:
+                picked_points = pick_points(ai.BridgeEvolution.bridge)
+                for picked_point in picked_points:
+                    if picked_point.isStationary:
+                        connected = ai.BridgeEvolution.bridge.getConnectedToJoint(picked_point)
+                        print(len(connected))
+                        if len(connected) > 0:
+                            bridge_level_from_bottom = length_y / length_x * (picked_point.position[0] - posX)
+                            final_high = (over_bridge_level + bridge_level_from_bottom + depth)
+                            static_pole1 = box(pos=vec(picked_point.position[0], final_high / 2 - depth + posY, 55),
+                                               length=30,
+                                               height=final_high, width=10, color=vec(0.5, 0.5, 0.5))
+                            static_pole2 = box(pos=vec(picked_point.position[0], final_high / 2 - depth + posY, -55),
+                                               length=30,
+                                               height=final_high, width=10, color=vec(0.5, 0.5, 0.5))
+                            static_bar = box(pos=vec(picked_point.position[0], final_high - depth + posY - 5, 0),
+                                               length=30,
+                                               height=10, width=100, color=vec(0.5, 0.5, 0.5))
+
+                            generatedExtraPoles.append(static_pole1)
+                            generatedExtraPoles.append(static_pole2)
+                            generatedExtraPoles.append(static_bar)
+
             if ai.BridgeEvolution.upgrade_still_running:
                 wtext_status.text = "\n\nStatus: simulation in progres"
             elif mechanics.road_broke:
@@ -444,6 +473,5 @@ def ui():
     while True:
         print(".", sep=" ")
         rate(2)
-
 
     print("END")
