@@ -1,4 +1,6 @@
+import ctypes
 import threading
+import time
 
 from tbneuralnetwork import ai
 from tbsymulator import mechanics
@@ -17,8 +19,45 @@ generatedCurves1 = []
 generatedCurves2 = []
 generatedRoad = []
 generatedPoints = []
+generatedTerrain = []
 static_load = 2000
 show_natural = True
+run_showing_bridge_next_steps = True
+
+
+class thread_with_exception(threading.Thread):
+    def __init__(self, name):
+        threading.Thread.__init__(self)
+        self.name = name
+        self.some_number = 0
+
+    def run(self):
+        # target function of the thread class
+        try:
+            while True:
+                chamber2 = ai.BridgeEvolution(
+                    (os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'tbneuralnetwork'))))
+                chamber2.load()
+                chamber2.upgrade("", 1)
+
+        finally:
+            print('ended')
+
+    def get_id(self):
+        # returns id of the respective thread
+        if hasattr(self, '_thread_id'):
+            return self._thread_id
+        for id, thread in threading._active.items():
+            if thread is self:
+                return id
+
+    def raise_exception(self):
+        thread_id = self.get_id()
+        res = ctypes.pythonapi.PyThreadState_SetAsyncExc(thread_id,
+                                                         ctypes.py_object(SystemExit))
+        if res > 1:
+            ctypes.pythonapi.PyThreadState_SetAsyncExc(thread_id, 0)
+            print('Exception raise failure')
 
 
 def stop_picking_points(b):
@@ -31,7 +70,7 @@ def stop_picking_points(b):
             b.text = "Points picked, making calculations"
 
 
-def delete_points(b):
+def delete_points():
     global staticPoints
     number_of_sphere = len(staticPoints)
     for i in range(0, number_of_sphere, 1):
@@ -73,6 +112,13 @@ def delete_road():
         del generatedRoad[0]
 
 
+def delete_terrain():
+    global generatedTerrain
+    number_of_stuff = len(generatedTerrain)
+    for i in range(0, number_of_stuff, 1):
+        generatedTerrain[0].visible = False
+        del generatedTerrain[0]
+
 def async_crazy_stuff():
     chamber2 = ai.BridgeEvolution((os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'tbneuralnetwork'))))
     chamber2.load()
@@ -89,14 +135,22 @@ def add_static_load(wi):
         static_load = 0.0
     print("STATIC LOAD (new): %d", static_load)
 
+def clear_my_scene():
+    global run_showing_bridge_next_steps
+    run_showing_bridge_next_steps = False
+    delete_road()
+    delete_curves_1()
+    delete_curves_2()
+    delete_points()
+    delete_terrain()
+
 
 def ui():
-    t1 = threading.Thread(target=async_crazy_stuff)
+    # t1 = threading.Thread(target=async_crazy_stuff)
+    first_start = True
+    t1 = None
     global picking_points, staticPoints
 
-    bridge_obj = None
-    point1 = None
-    point2 = None
     added_static_points = []
 
     def change_way_to_present_bridge(b):
@@ -108,6 +162,20 @@ def ui():
             if i != b.i:
                 radio_buttons[i].checked = False
 
+    def restart_this():
+        global picking_points
+        nonlocal t1
+        picking_points = True
+        print("RESTART_THIS")
+        if t1 is not None:
+            print("INSIDE")
+            t1.raise_exception()
+            t1.join()
+
+        clear_my_scene()
+        time.sleep(1)
+        start_everything()
+
     scene = canvas(width=canvasWidth, height=canvasHeight,
                    center=vector(canvasWidth / 2.0, canvasHeight / 2.0, 0), background=vec(0.9, 0.9, 1),
                    resizable=False)
@@ -115,6 +183,7 @@ def ui():
     wtext(text="\n\nMenu: \n\n")
     button(text="Build initial (pick at least 2 points)", bind=stop_picking_points)
     button(text="Delete points", bind=delete_points)
+    button(text="RESTART", bind=restart_this)
     wtext(text="\n\nStatic load: ")
     winput(text="", bind=add_static_load, width=300)
     wtext(text=" kg per meter\n\n")
@@ -131,6 +200,8 @@ def ui():
 
     drag = True
     s = None
+    print("scene axis: ")
+    print(scene.axis)
 
     def grab(evt):
         if picking_points:
@@ -247,102 +318,128 @@ def ui():
     scene.bind('mousemove', move)
     scene.bind('mouseup', drop)
 
-    while picking_points:
-        rate(10)
+    def start_everything():
+        scene.axis = vector(0, 0, -1)
+        scene.center = vector(canvasWidth / 2.0, canvasHeight / 2.0, 0)
+        nonlocal first_start
+        first_start = False
+        print("START_EVERYTHING")
+        global run_showing_bridge_next_steps
+        nonlocal t1
+        run_showing_bridge_next_steps = True
+        t1 = thread_with_exception('Thread 1')
+        bridge_obj = None
+        point1 = None
+        point2 = None
+        while picking_points:
+            rate(10)
 
-    print(staticPoints)
-    if len(staticPoints) >= 1:
-        point1 = m2d.Vector2(staticPoints[0].pos.x, staticPoints[0].pos.y)
-    if len(staticPoints) >= 2:
-        point2 = m2d.Vector2(staticPoints[1].pos.x, staticPoints[1].pos.y)
-    if len(staticPoints) > 2:
-        it = 0
-        while it < len(staticPoints) - 2:
-            added_static_points.append(m2d.Vector2(staticPoints[it + 2].pos.x, staticPoints[it + 2].pos.y))
-            it = it + 1
+        print(staticPoints)
+        if len(staticPoints) >= 1:
+            point1 = m2d.Vector2(staticPoints[0].pos.x, staticPoints[0].pos.y)
+        if len(staticPoints) >= 2:
+            point2 = m2d.Vector2(staticPoints[1].pos.x, staticPoints[1].pos.y)
+        if len(staticPoints) > 2:
+            it = 0
+            while it < len(staticPoints) - 2:
+                added_static_points.append(m2d.Vector2(staticPoints[it + 2].pos.x, staticPoints[it + 2].pos.y))
+                it = it + 1
 
-    number_of_extra_static_points = len(staticPoints) - 2
+        number_of_extra_static_points = len(staticPoints) - 2
 
-    if len(staticPoints) == 2:
-        bridge_obj = Builder.buildInitial(materials, point1, point2)
-        bridge_obj.roadStrains = static_load
-        bridge_obj.render("renderCheck.png")
-    elif len(staticPoints) > 2:
-        bridge_obj = Builder.buildInitial(materials, point1, point2, number_of_extra_static_points, added_static_points)
-        bridge_obj.roadStrains = static_load
-        bridge_obj.render("renderCheck.png")
+        if len(staticPoints) == 2:
+            bridge_obj = Builder.buildInitial(materials, point1, point2)
+            bridge_obj.roadStrains = static_load
+            bridge_obj.render("renderCheck.png")
+        elif len(staticPoints) > 2:
+            bridge_obj = Builder.buildInitial(materials, point1, point2, number_of_extra_static_points,
+                                              added_static_points)
+            bridge_obj.roadStrains = static_load
+            bridge_obj.render("renderCheck.png")
 
-    print("%f %f %f %f %f %f", staticPoints[0].pos.x, staticPoints[0].pos.y, staticPoints[1].pos.x,
-          staticPoints[1].pos.y)
-    print(point1)
+        print("%f %f %f %f %f %f", staticPoints[0].pos.x, staticPoints[0].pos.y, staticPoints[1].pos.x,
+              staticPoints[1].pos.y)
+        print(point1)
 
-    length_x = abs(staticPoints[1].pos.x - staticPoints[0].pos.x)
-    length_y = abs(staticPoints[1].pos.y - staticPoints[0].pos.y)
+        length_x = abs(staticPoints[1].pos.x - staticPoints[0].pos.x)
+        length_y = abs(staticPoints[1].pos.y - staticPoints[0].pos.y)
 
-    posX = 0
-    posY = 0
-    if staticPoints[0].pos.x < staticPoints[1].pos.x:
-        posX = staticPoints[0].pos.x
-    else:
-        posX = staticPoints[1].pos.x
+        posX = 0
+        posY = 0
+        if staticPoints[0].pos.x < staticPoints[1].pos.x:
+            posX = staticPoints[0].pos.x
+        else:
+            posX = staticPoints[1].pos.x
 
-    if staticPoints[0].pos.y < staticPoints[1].pos.y:
-        posY = staticPoints[0].pos.y
-    else:
-        posY = staticPoints[1].pos.y
+        if staticPoints[0].pos.y < staticPoints[1].pos.y:
+            posY = staticPoints[0].pos.y
+        else:
+            posY = staticPoints[1].pos.y
 
-    position_x = length_x / 2 + posX
-    position_y = length_y / 2 + posY
+        position_x = length_x / 2 + posX
+        position_y = length_y / 2 + posY
 
-    depth = 400
+        depth = 400
 
-    terrain_shape = shapes.points(
-        pos=[[0, 0], [0, -length_y - 200], [-length_x, -length_y - 200], [-length_x, -length_y],
-             [-length_x - 1000, -length_y],
-             [-length_x - 1000, -length_y - depth], [1000, -length_y - depth], [1000, 0]])
+        terrain_shape = shapes.points(
+            pos=[[0, 0], [0, -length_y - 200], [-length_x, -length_y - 200], [-length_x, -length_y],
+                 [-length_x - 1000, -length_y],
+                 [-length_x - 1000, -length_y - depth], [1000, -length_y - depth], [1000, 0]])
 
-    terrain_path = [vec(position_x, position_y, 0),
-                    vec(position_x, position_y, 1000)]
+        terrain_path = [vec(position_x, position_y, 0),
+                        vec(position_x, position_y, 1000)]
 
-    scene.center = vector(canvasWidth / 2.0, canvasHeight / 2.0, 0)
-    scene.camera.axis.z = 900
-    show_double_bridge(bridge_obj)
-    scene.autoscale = False
-    terrain = extrusion(path=terrain_path, shape=terrain_shape, visible=False)
-    # terrain.rotate(angle=pi, axis=vec(position_x, 0, 0))
-    print("POINTS: ")
-    print(staticPoints[0].pos)
-    print(staticPoints[1].pos)
+        scene.center = vector(canvasWidth / 2.0, canvasHeight / 2.0, 0)
+        scene.camera.axis.z = 900
+        show_double_bridge(bridge_obj)
+        scene.autoscale = False
+        terrain = extrusion(path=terrain_path, shape=terrain_shape, visible=False)
+        generatedTerrain.append(terrain)
+        # terrain.rotate(angle=pi, axis=vec(position_x, 0, 0))
+        print("POINTS: ")
+        print(staticPoints[0].pos)
+        print(staticPoints[1].pos)
 
-    if (staticPoints[0].pos.x < staticPoints[1].pos.x) and (staticPoints[0].pos.y < staticPoints[1].pos.y):
-        terrain.rotate(angle=pi, axis=vec(0, position_y, 0))
-    elif (staticPoints[1].pos.x < staticPoints[0].pos.x) and (staticPoints[1].pos.y < staticPoints[0].pos.y):
-        terrain.rotate(angle=pi, axis=vec(0, position_y, 0))
+        if (staticPoints[0].pos.x < staticPoints[1].pos.x) and (staticPoints[0].pos.y < staticPoints[1].pos.y):
+            terrain.rotate(angle=pi, axis=vec(0, position_y, 0))
+        elif (staticPoints[1].pos.x < staticPoints[0].pos.x) and (staticPoints[1].pos.y < staticPoints[0].pos.y):
+            terrain.rotate(angle=pi, axis=vec(0, position_y, 0))
 
-    terrain.pos = vec(position_x, position_y - depth / 2, 0)
-    terrain.color = vec(0.6, 0.25, 0.02)
+        terrain.pos = vec(position_x, position_y - depth / 2, 0)
+        terrain.color = vec(0.6, 0.25, 0.02)
 
-    terrain.visible = True
-    ai.BridgeEvolution.bridge = bridge_obj
-    ai.BridgeEvolution.upgrade_still_running = True
+        terrain.visible = True
+        ai.BridgeEvolution.bridge = bridge_obj
+        ai.BridgeEvolution.upgrade_still_running = True
 
-    t1.start()
-    wtext_status.text = "\n\nStatus: simulation in progres."
-    scene.axis = vector(-0.449187, -0.572867, -0.685605)
-    scene.center = vector(position_x, position_y, 0)
+        t1.start()
+        wtext_status.text = "\n\nStatus: simulation in progres."
+        scene.axis = vector(-0.449187, -0.572867, -0.685605)
+        scene.center = vector(position_x, position_y, 0)
+        i = 0
+        while run_showing_bridge_next_steps:
+            i = i + 1
+            wtext_progress.text = "\n\nProgress: already done %d simulations" % mechanics.executedSimulation
+            show_double_bridge(ai.BridgeEvolution.bridge)
+            print(scene.center)
+            # print(scene.position)
+            if ai.BridgeEvolution.upgrade_still_running:
+                wtext_status.text = "\n\nStatus: simulation in progres"
+            elif mechanics.road_broke:
+                wtext_status.text = "\n\nStatus: simulation ended, bridge broken."
+            else:
+                wtext_status.text = "\n\nStatus: bridge simulation completed successfully, bridge stable."
+            rate(2)
+
+        t1.raise_exception()
+        t1.join()
+
+    if first_start:
+        start_everything()
+
     while True:
-        wtext_progress.text = "\n\nProgress: already done %d simulations" % mechanics.executedSimulation
-        show_double_bridge(ai.BridgeEvolution.bridge)
-        print(scene.center)
-        # print(scene.position)
-        if ai.BridgeEvolution.upgrade_still_running :
-            wtext_status.text = "\n\nStatus: simulation in progres"
-        elif mechanics.road_broke:
-            wtext_status.text = "\n\nStatus: simulation ended, bridge broken."
-        else :
-            wtext_status.text = "\n\nStatus: bridge simulation completed successfully, bridge stable."
-        rate(2)
-
+        print(".", sep=" ")
+        rate(20)
 
 
     print("END")
