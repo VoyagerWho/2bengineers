@@ -122,6 +122,7 @@ def ui():
     radio_natural = radio(bind=change_way_to_present_bridge, text="Show used materials\n\n", i=1, natural=True)
     radio_buttons = [radio_strain, radio_natural]
     wtext_status = wtext(text="\n\nStatus: picking points ")
+    wtext_progress = wtext(text="\n\nProgress: -")
     title = "Click and drag the mouse to insert static point."
     scene.title = title
 
@@ -326,19 +327,22 @@ def ui():
     ai.BridgeEvolution.upgrade_still_running = True
 
     t1.start()
-    wtext_status.text = "Status: simulation in progres."
+    wtext_status.text = "\n\nStatus: simulation in progres."
     scene.axis = vector(-0.449187, -0.572867, -0.685605)
     scene.center = vector(position_x, position_y, 0)
-    while ai.BridgeEvolution.upgrade_still_running:
-        wtext_status.text = "Status: simulation in progres. Already done %d simulations" % mechanics.executedSimulation
+    while True:
+        wtext_progress.text = "\n\nProgress: already done %d simulations" % mechanics.executedSimulation
         show_double_bridge(ai.BridgeEvolution.bridge)
         print(scene.center)
         # print(scene.position)
-        rate(1)
+        if ai.BridgeEvolution.upgrade_still_running :
+            wtext_status.text = "\n\nStatus: simulation in progres"
+        elif mechanics.road_broke:
+            wtext_status.text = "\n\nStatus: simulation ended, bridge broken."
+        else :
+            wtext_status.text = "\n\nStatus: bridge simulation completed successfully, bridge stable."
+        rate(2)
 
-    if mechanics.road_broke:
-        wtext_status.text = "Status: simulation ended, bridge broken"
-    else:
-        wtext_status.text = "Status: bridge simulation completed successfully, bridge stable"
+
 
     print("END")
