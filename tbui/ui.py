@@ -23,6 +23,7 @@ generatedTerrain = []
 static_load = 2000
 show_natural = True
 run_showing_bridge_next_steps = True
+wait_for_click = False
 
 
 class thread_with_exception(threading.Thread):
@@ -34,11 +35,10 @@ class thread_with_exception(threading.Thread):
     def run(self):
         # target function of the thread class
         try:
-            while True:
-                chamber2 = ai.BridgeEvolution(
-                    (os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'tbneuralnetwork'))))
-                chamber2.load()
-                chamber2.upgrade("", 1)
+            chamber2 = ai.BridgeEvolution(
+                (os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'tbneuralnetwork'))))
+            chamber2.load()
+            chamber2.upgrade("", 1)
 
         finally:
             print('ended')
@@ -149,7 +149,7 @@ def ui():
     # t1 = threading.Thread(target=async_crazy_stuff)
     first_start = True
     t1 = None
-    global picking_points, staticPoints
+    global picking_points, staticPoints, wait_for_click
 
     added_static_points = []
 
@@ -163,18 +163,21 @@ def ui():
                 radio_buttons[i].checked = False
 
     def restart_this():
-        global picking_points
+        global picking_points, wait_for_click, run_showing_bridge_next_steps
         nonlocal t1
-        picking_points = True
+        run_showing_bridge_next_steps = False
+        wait_for_click = True
+
         print("RESTART_THIS")
         if t1 is not None:
             print("INSIDE")
             t1.raise_exception()
             t1.join()
 
-        clear_my_scene()
         time.sleep(1)
+        picking_points = True
         start_everything()
+
 
     scene = canvas(width=canvasWidth, height=canvasHeight,
                    center=vector(canvasWidth / 2.0, canvasHeight / 2.0, 0), background=vec(0.9, 0.9, 1),
@@ -319,19 +322,22 @@ def ui():
     scene.bind('mouseup', drop)
 
     def start_everything():
+        clear_my_scene()
         scene.axis = vector(0, 0, -1)
         scene.center = vector(canvasWidth / 2.0, canvasHeight / 2.0, 0)
         nonlocal first_start
         first_start = False
         print("START_EVERYTHING")
-        global run_showing_bridge_next_steps
+        global run_showing_bridge_next_steps, wait_for_click
         nonlocal t1
-        run_showing_bridge_next_steps = True
+
         t1 = thread_with_exception('Thread 1')
         bridge_obj = None
         point1 = None
         point2 = None
+
         while picking_points:
+            wait_for_click = False
             rate(10)
 
         print(staticPoints)
@@ -417,6 +423,7 @@ def ui():
         scene.axis = vector(-0.449187, -0.572867, -0.685605)
         scene.center = vector(position_x, position_y, 0)
         i = 0
+        run_showing_bridge_next_steps = True
         while run_showing_bridge_next_steps:
             i = i + 1
             wtext_progress.text = "\n\nProgress: already done %d simulations" % mechanics.executedSimulation
@@ -431,15 +438,12 @@ def ui():
                 wtext_status.text = "\n\nStatus: bridge simulation completed successfully, bridge stable."
             rate(2)
 
-        t1.raise_exception()
-        t1.join()
-
     if first_start:
         start_everything()
 
     while True:
         print(".", sep=" ")
-        rate(20)
+        rate(2)
 
 
     print("END")
