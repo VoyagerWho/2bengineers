@@ -169,7 +169,7 @@ def ui():
         wait_for_click = True
 
         print("RESTART_THIS")
-        if t1 is not None:
+        if t1 is not None and t1.is_alive():
             print("INSIDE")
             t1.raise_exception()
             t1.join()
@@ -280,8 +280,8 @@ def ui():
                         road_position_x = abs(road_length_x) / 2 + road_posX
                         road_position_y = abs(road_length_y) / 2 + road_posY
                         road_box_width = sqrt(road_length_x * road_length_x + road_length_y * road_length_y)
-                        road = box(pos=vec(road_position_x, road_position_y, 0), length=100, height=2,
-                                   width=road_box_width, axis=vec(road_length_x, road_length_y, 0), color=param)
+                        road = box(pos=vec(road_position_x, road_position_y, 0), length=road_box_width, height=2,
+                                   width=100, axis=vec(road_length_x, road_length_y, 0), color=param)
                         generatedRoad.append(road)
 
                 elif ln[5].name == "Steel Beam":
