@@ -375,11 +375,27 @@ def ui():
               staticPoints[1].pos.y)
         print(point1)
 
-        length_x = abs(staticPoints[1].pos.x - staticPoints[0].pos.x)
-        length_y = abs(staticPoints[1].pos.y - staticPoints[0].pos.y)
+        left_point = 0
+        rigth_point = 0
+        if staticPoints[0].pos.x < staticPoints[1].pos.x:
+            left_point = staticPoints[0]
+            rigth_point = staticPoints[1]
+        else:
+            left_point = staticPoints[1]
+            rigth_point = staticPoints[0]
+
+        length_x_not_abs = staticPoints[1].pos.x - staticPoints[0].pos.x
+        length_y_not_abs = staticPoints[1].pos.y - staticPoints[0].pos.y
+        length_x = abs(length_x_not_abs)
+        length_y = abs(length_y_not_abs)
 
         posX = 0
         posY = 0
+        grass_left_position_x = left_point.pos.x - 500
+        grass_left_position_y = left_point.pos.y
+        grass_right_position_x = rigth_point.pos.x + 500
+        grass_right_position_y = rigth_point.pos.y
+
         if staticPoints[0].pos.x < staticPoints[1].pos.x:
             posX = staticPoints[0].pos.x
         else:
@@ -393,15 +409,44 @@ def ui():
         position_x = length_x / 2 + posX
         position_y = length_y / 2 + posY
 
-        depth = 400
-
+        hight_of_terrain = 400
+        hight_of_cliff = 200
+        depth = 1000
         terrain_shape = shapes.points(
             pos=[[0, 0], [0, -length_y - 200], [-length_x, -length_y - 200], [-length_x, -length_y],
                  [-length_x - 1000, -length_y],
-                 [-length_x - 1000, -length_y - depth], [1000, -length_y - depth], [1000, 0]])
+                 [-length_x - 1000, -length_y - hight_of_terrain], [1000, -length_y - hight_of_terrain], [1000, 0]])
 
         terrain_path = [vec(position_x, position_y, 0),
-                        vec(position_x, position_y, 1000)]
+                        vec(position_x, position_y, depth)]
+        green_color = vec(0.3, 0.9, 0.3)
+        blue_color = vec(0.6, 0.6, 1)
+
+        grass1_front = box(pos=vec(grass_left_position_x, grass_left_position_y, 275),
+                           length=1000,
+                           height=1, width=450, color=green_color)
+        grass2_front = box(pos=vec(grass_right_position_x, grass_right_position_y, 275),
+                           length=1000,
+                           height=1, width=450, color=green_color)
+
+        grass1_back = box(pos=vec(grass_left_position_x, grass_left_position_y, -275),
+                          length=1000,
+                          height=1, width=450, color=green_color)
+        grass2_back = box(pos=vec(grass_right_position_x, grass_right_position_y, -275),
+                          length=1000,
+                          height=1, width=450, color=green_color)
+
+        river = box(pos=vec(position_x, posY - hight_of_cliff, 0),
+                    length=length_x,
+                    height=1, width=depth, color=blue_color)
+
+        road_terrain1 = box(pos=vec(grass_left_position_x, grass_left_position_y, 0),
+                            length=1000,
+                            height=1, width=100, color=vec(0.3, 0.3, 0.3))
+
+        road_terrain2 = box(pos=vec(grass_right_position_x, grass_right_position_y, 0),
+                            length=1000,
+                            height=1, width=100, color=vec(0.3, 0.3, 0.3))
 
         scene.center = vector(canvasWidth / 2.0, canvasHeight / 2.0, 0)
         scene.camera.axis.z = 900
@@ -409,6 +454,13 @@ def ui():
         scene.autoscale = False
         terrain = extrusion(path=terrain_path, shape=terrain_shape, visible=False)
         generatedTerrain.append(terrain)
+        generatedTerrain.append(grass1_front)
+        generatedTerrain.append(grass2_front)
+        generatedTerrain.append(grass1_back)
+        generatedTerrain.append(grass2_back)
+        generatedTerrain.append(river)
+        generatedTerrain.append(road_terrain1)
+        generatedTerrain.append(road_terrain2)
         # terrain.rotate(angle=pi, axis=vec(position_x, 0, 0))
         print("POINTS: ")
         print(staticPoints[0].pos)
@@ -419,8 +471,8 @@ def ui():
         elif (staticPoints[1].pos.x < staticPoints[0].pos.x) and (staticPoints[1].pos.y < staticPoints[0].pos.y):
             terrain.rotate(angle=pi, axis=vec(0, position_y, 0))
 
-        terrain.pos = vec(position_x, position_y - depth / 2, 0)
-        terrain.color = vec(0.6, 0.25, 0.02)
+        terrain.pos = vec(position_x, position_y - hight_of_terrain / 2, 0)
+        terrain.color = vec(0.5, 0.2, 0.02)
 
         terrain.visible = True
         ai.BridgeEvolution.bridge = bridge_obj
@@ -444,16 +496,19 @@ def ui():
                         print(len(connected))
                         if len(connected) > 0:
                             bridge_level_from_bottom = length_y / length_x * (picked_point.position[0] - posX)
-                            final_high = (over_bridge_level + bridge_level_from_bottom + depth)
-                            static_pole1 = box(pos=vec(picked_point.position[0], final_high / 2 - depth + posY, 55),
-                                               length=30,
-                                               height=final_high, width=10, color=vec(0.5, 0.5, 0.5))
-                            static_pole2 = box(pos=vec(picked_point.position[0], final_high / 2 - depth + posY, -55),
-                                               length=30,
-                                               height=final_high, width=10, color=vec(0.5, 0.5, 0.5))
-                            static_bar = box(pos=vec(picked_point.position[0], final_high - depth + posY - 5, 0),
-                                               length=30,
-                                               height=10, width=100, color=vec(0.5, 0.5, 0.5))
+                            final_high = (over_bridge_level + bridge_level_from_bottom + hight_of_terrain)
+                            static_pole1 = box(
+                                pos=vec(picked_point.position[0], final_high / 2 - hight_of_terrain + posY, 55),
+                                length=30,
+                                height=final_high, width=10, color=vec(0.5, 0.5, 0.5))
+                            static_pole2 = box(
+                                pos=vec(picked_point.position[0], final_high / 2 - hight_of_terrain + posY, -55),
+                                length=30,
+                                height=final_high, width=10, color=vec(0.5, 0.5, 0.5))
+                            static_bar = box(
+                                pos=vec(picked_point.position[0], final_high - hight_of_terrain + posY - 5, 0),
+                                length=30,
+                                height=10, width=100, color=vec(0.5, 0.5, 0.5))
 
                             generatedExtraPoles.append(static_pole1)
                             generatedExtraPoles.append(static_pole2)
