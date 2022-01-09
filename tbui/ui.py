@@ -20,8 +20,7 @@ run_showing_bridge_next_steps = True
 wait_for_click = False
 
 #
-generatedCurves1 = []
-generatedCurves2 = []
+generated_curves = []
 generatedRoad = []
 generatedPoints = []
 generatedTerrain = []
@@ -117,31 +116,17 @@ def delete_points():
         del staticPoints[0]
 
 
-def delete_curves_1():
-    global generatedCurves1, generatedPoints
-    number_of_curves = len(generatedCurves1)
+def delete_curves():
+    global generated_curves, generatedPoints
+    number_of_curves = len(generated_curves)
     number_of_points = len(generatedPoints)
     for i in range(0, number_of_curves, 1):
-        generatedCurves1[0].visible = False
-        del generatedCurves1[0]
+        generated_curves[0].visible = False
+        del generated_curves[0]
 
     # for i in range(0, number_of_points, 1):
     #     generatedPoints[0].visible = False
     #     del generatedPoints[0]
-
-
-def delete_curves_2():
-    global generatedCurves2, generatedPoints
-    number_of_curves = len(generatedCurves2)
-    number_of_points = len(generatedPoints)
-    for i in range(0, number_of_curves, 1):
-        generatedCurves2[0].visible = False
-        del generatedCurves2[0]
-
-    # for i in range(0, number_of_points, 1):
-    #     generatedPoints[0].visible = False
-    #     del generatedPoints[0]
-
 
 def delete_road():
     global generatedRoad
@@ -182,8 +167,7 @@ def clear_my_scene():
     global run_showing_bridge_next_steps
     run_showing_bridge_next_steps = False
     delete_road()
-    delete_curves_1()
-    delete_curves_2()
+    delete_curves()
     delete_points()
     delete_terrain()
     delete_extra_poles()
@@ -384,45 +368,46 @@ def ui():
             drag = False
             s.pos = scene.mouse.pos
 
-    def show_bridge(bridge, position_z, version):
+    def show_bridge(bridge, position_z, width_of_bridge):
         picked_lines = pick_lines(bridge)
         # picked_points = pick_points(bridge)
-        if version == 1:
-            delete_curves_1()
-            delete_road()
-        else:
-            delete_curves_2()
+
+        delete_curves()
+        delete_road()
 
         print("SHOW BRIDGE")
         for ln in picked_lines:
-            list_of_points = []
-            list_of_points.append(vector(ln[0], ln[1], position_z))
-            list_of_points.append(vector(ln[2], ln[3], position_z))
+            list_of_points1 = []
+            list_of_points2 = []
+            list_of_points1.append(vector(ln[0], ln[1], position_z))
+            list_of_points1.append(vector(ln[2], ln[3], position_z))
+            list_of_points2.append(vector(ln[0], ln[1], position_z+width_of_bridge))
+            list_of_points2.append(vector(ln[2], ln[3], position_z+width_of_bridge))
             if show_natural:
                 param = vec(0, 1, 0)
                 rad = 2
                 if ln[5].name == "Asphalt Road":
                     param = color_asphalt
                     rad = 3
-                    if version == 1:
-                        if ln[0] < ln[2]:
-                            road_posX = ln[0]
-                        else:
-                            road_posX = ln[2]
+                    if ln[0] < ln[2]:
+                        road_posX = ln[0]
+                    else:
+                        road_posX = ln[2]
 
-                        if ln[1] < ln[3]:
-                            road_posY = ln[1]
-                        else:
-                            road_posY = ln[3]
+                    if ln[1] < ln[3]:
+                        road_posY = ln[1]
+                    else:
+                        road_posY = ln[3]
 
-                        road_length_x = ln[2] - ln[0]
-                        road_length_y = ln[3] - ln[1]
-                        road_position_x = abs(road_length_x) / 2 + road_posX
-                        road_position_y = abs(road_length_y) / 2 + road_posY
-                        road_box_width = sqrt(road_length_x * road_length_x + road_length_y * road_length_y)
-                        road = box(pos=vec(road_position_x, road_position_y, 0), length=road_box_width, height=2,
-                                   width=100, axis=vec(road_length_x, road_length_y, 0), color=param)
-                        generatedRoad.append(road)
+                    road_length_x = ln[2] - ln[0]
+                    road_length_y = ln[3] - ln[1]
+                    road_position_x = abs(road_length_x) / 2 + road_posX
+                    road_position_y = abs(road_length_y) / 2 + road_posY
+                    road_box_width = sqrt(road_length_x * road_length_x + road_length_y * road_length_y)
+                    road = box(pos=vec(road_position_x, road_position_y, 0), length=road_box_width, height=2,
+                               width=100, axis=vec(road_length_x, road_length_y, 0), color=param)
+                    generatedRoad.append(road)
+
 
                 elif ln[5].name == "Steel Beam":
                     param = color_steel
@@ -431,18 +416,16 @@ def ui():
                     param = color_wood
                     rad = 2
 
-                c = curve(pos=list_of_points, color=param, radius=rad)
-                if version == 1:
-                    generatedCurves1.append(c)
-                else:
-                    generatedCurves2.append(c)
+                c1 = curve(pos=list_of_points1, color=param, radius=rad)
+                c2 = curve(pos=list_of_points2, color=param, radius=rad)
+                generated_curves.append(c1)
+                generated_curves.append(c2)
 
             else:
-                c = curve(pos=list_of_points, color=vec(ln[4], 1.0 - ln[4], ln[4]), radius=1.5)
-                if version == 1:
-                    generatedCurves1.append(c)
-                else:
-                    generatedCurves2.append(c)
+                c1 = curve(pos=list_of_points1, color=vec(ln[4], 1.0 - ln[4], ln[4]), radius=1.5)
+                c2 = curve(pos=list_of_points2, color=vec(ln[4], 1.0 - ln[4], ln[4]), radius=1.5)
+                generated_curves.append(c1)
+                generated_curves.append(c2)
 
         # Picking points is right now too slow
         # p1_shape = shapes.circle(radius=5)
@@ -452,10 +435,6 @@ def ui():
         #
         #     p1 = extrusion(path=p1_path, shape=p1_shape, color=vec(0.2, 0.2, 0.2))
         #     generatedPoints.append(p1)
-
-    def show_double_bridge(bridge):
-        show_bridge(bridge, -50, 1)
-        show_bridge(bridge, 50, 2)
 
     scene.bind('mousedown', grab)
     scene.bind('mousemove', move)
@@ -505,7 +484,7 @@ def ui():
 
         scene.center = vector(canvasWidth / 2.0, canvasHeight / 2.0, 0)
         scene.camera.axis.z = 900
-        show_double_bridge(bridge_obj)
+        show_bridge(bridge_obj, -50, 100)
         scene.autoscale = False
 
         ai.BridgeEvolution.bridge = bridge_obj
@@ -519,7 +498,7 @@ def ui():
         run_showing_bridge_next_steps = True
         while run_showing_bridge_next_steps:
             wtext_progress.text = "\n\nProgress: already done %d simulations" % mechanics.executedSimulation
-            show_double_bridge(ai.BridgeEvolution.bridge)
+            show_bridge(bridge_obj, -50, 100)
             delete_extra_poles()
             if number_of_extra_static_points > 0:
                 generate_extra_poles()
