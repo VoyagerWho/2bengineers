@@ -12,7 +12,8 @@ import os
 canvasWidth = 1200
 canvasHeight = 480
 picking_points = True
-staticPoints = []
+entered_points_as_sphere = []
+entered_points = []
 
 static_load = 0
 show_natural = True
@@ -35,8 +36,8 @@ color_green = vec(0.3, 0.9, 0.3)
 color_blue = vec(0.6, 0.6, 1)
 color_concrete = vec(0.5, 0.5, 0.5)
 
-hight_of_terrain = 400
-hight_of_cliff = 200
+height_of_terrain = 400
+height_of_cliff = 200
 
 posX = 0
 posY = 0
@@ -46,14 +47,24 @@ position_x = 0
 position_y = 0
 
 
-class thread_with_exception(threading.Thread):
+class BridgeEvolutionThread(threading.Thread):
+    """
+    Thread class that starts the evolution of the bridge.
+    Allows an exception to be thrown that terminates the bridge simulation.
+    """
     def __init__(self, name):
+        """
+        Class initialization
+        :param name: name odf the thread
+        """
         threading.Thread.__init__(self)
         self.name = name
         self.some_number = 0
 
     def run(self):
-        # target function of the thread class
+        """
+        Target function of the thread class
+        """
         try:
             bridge_evolution = ai.BridgeEvolution(
                 (os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'tbneuralnetwork'))))
@@ -64,7 +75,9 @@ class thread_with_exception(threading.Thread):
             print('ended')
 
     def get_id(self):
-        # returns id of the respective thread
+        """
+        Function that returns id of the respective thread
+        """
         if hasattr(self, '_thread_id'):
             return self._thread_id
         for id, thread in threading._active.items():
@@ -72,6 +85,9 @@ class thread_with_exception(threading.Thread):
                 return id
 
     def raise_exception(self):
+        """
+        Function that allows to throw a thread which stop work of the thread
+        """
         thread_id = self.get_id()
         res = ctypes.pythonapi.PyThreadState_SetAsyncExc(thread_id,
                                                          ctypes.py_object(SystemExit))
@@ -81,6 +97,11 @@ class thread_with_exception(threading.Thread):
 
 
 def pick_lines(bridge):
+    """
+    Help function picking up not broken connections between joints in bridge
+    :param bridge: bridge to pick up connections
+    :return: list of non-broken connections
+    """
     lines = []
     for connection in bridge.connections:
         if not connection.broken:
@@ -89,18 +110,15 @@ def pick_lines(bridge):
                           connection.getStrain(), connection.material))
     return lines
 
-    """
-    Help function for ai connection
-    :param genomes: genomes list
-    :param config: genome class configuration data
-    :return: float genome's fitness
-    """
-
 
 def stop_picking_points(b):
-    global staticPoints
-    if len(staticPoints) >= 2:
-        global picking_points
+    """
+    Help function that turns off the point input mode (by if at least 2 points have been entered)
+    by changing the value of the global variable picking_points to False
+    :param b: button that triggered this function
+    """
+    global entered_points_as_sphere, picking_points
+    if len(entered_points_as_sphere) >= 2:
         picking_points = False
         if picking_points:
             b.text = "Build initial (pick at least 2 points)"
@@ -109,17 +127,22 @@ def stop_picking_points(b):
 
 
 def delete_points():
-    global staticPoints
-    number_of_sphere = len(staticPoints)
+    """
+    Function that deletes the entered points
+    """
+    global entered_points_as_sphere
+    number_of_sphere = len(entered_points_as_sphere)
     for i in range(0, number_of_sphere, 1):
-        staticPoints[0].visible = False
-        del staticPoints[0]
+        entered_points_as_sphere[0].visible = False
+        del entered_points_as_sphere[0]
 
 
-def delete_curves():
-    global generated_curves, generatedPoints
+def delete_connections():
+    """
+    Function that deletes displayed connections
+    """
+    global generated_curves
     number_of_curves = len(generated_curves)
-    number_of_points = len(generatedPoints)
     for i in range(0, number_of_curves, 1):
         generated_curves[0].visible = False
         del generated_curves[0]
@@ -128,7 +151,11 @@ def delete_curves():
     #     generatedPoints[0].visible = False
     #     del generatedPoints[0]
 
+
 def delete_road():
+    """
+    Function that deletes displayed bridge road
+    """
     global generatedRoad
     number_of_boxes = len(generatedRoad)
     for i in range(0, number_of_boxes, 1):
@@ -137,6 +164,9 @@ def delete_road():
 
 
 def delete_terrain():
+    """
+    Function that deletes elements of the displayed terrain
+    """
     global generatedTerrain
     number_of_stuff = len(generatedTerrain)
     for i in range(0, number_of_stuff, 1):
@@ -144,7 +174,10 @@ def delete_terrain():
         del generatedTerrain[0]
 
 
-def delete_extra_poles():
+def delete_pillars():
+    """
+    Function that deletes pillar supports the additional static points used by the simulation
+    """
     global generatedExtraPoles
     number_of_stuff = len(generatedExtraPoles)
     for i in range(0, number_of_stuff, 1):
@@ -153,6 +186,9 @@ def delete_extra_poles():
 
 
 def add_static_load(wi):
+    """
+    Function that adds the value of the additional static bridge load
+    """
     global static_load
 
     print("STATIC LOAD (old): %d", static_load)
@@ -164,30 +200,37 @@ def add_static_load(wi):
 
 
 def clear_my_scene():
+    """
+    Function that removes all items displayed on the stage
+    """
     global run_showing_bridge_next_steps
     run_showing_bridge_next_steps = False
     delete_road()
-    delete_curves()
+    delete_connections()
     delete_points()
     delete_terrain()
-    delete_extra_poles()
+    delete_pillars()
 
 
 def generate_terrain():
-    global staticPoints, hight_of_terrain, hight_of_cliff, posX, posY, length_x, length_y, position_x, position_y
+    """
+    Function that generates terrain elements and displays on the scene
+    """
+    global entered_points_as_sphere, height_of_terrain, height_of_cliff,\
+        posX, posY, length_x, length_y, position_x, position_y
     left_point = None
     right_point = None
     depth = 1000
 
-    if staticPoints[0].pos.x < staticPoints[1].pos.x:
-        left_point = staticPoints[0]
-        right_point = staticPoints[1]
+    if entered_points_as_sphere[0].pos.x < entered_points_as_sphere[1].pos.x:
+        left_point = entered_points_as_sphere[0]
+        right_point = entered_points_as_sphere[1]
     else:
-        left_point = staticPoints[1]
-        right_point = staticPoints[0]
+        left_point = entered_points_as_sphere[1]
+        right_point = entered_points_as_sphere[0]
 
-    length_x_not_abs = staticPoints[1].pos.x - staticPoints[0].pos.x
-    length_y_not_abs = staticPoints[1].pos.y - staticPoints[0].pos.y
+    length_x_not_abs = entered_points_as_sphere[1].pos.x - entered_points_as_sphere[0].pos.x
+    length_y_not_abs = entered_points_as_sphere[1].pos.y - entered_points_as_sphere[0].pos.y
     length_x = abs(length_x_not_abs)
     length_y = abs(length_y_not_abs)
 
@@ -196,15 +239,15 @@ def generate_terrain():
     grass_right_position_x = right_point.pos.x + 500
     grass_right_position_y = right_point.pos.y
 
-    if staticPoints[0].pos.x < staticPoints[1].pos.x:
-        posX = staticPoints[0].pos.x
+    if entered_points_as_sphere[0].pos.x < entered_points_as_sphere[1].pos.x:
+        posX = entered_points_as_sphere[0].pos.x
     else:
-        posX = staticPoints[1].pos.x
+        posX = entered_points_as_sphere[1].pos.x
 
-    if staticPoints[0].pos.y < staticPoints[1].pos.y:
-        posY = staticPoints[0].pos.y
+    if entered_points_as_sphere[0].pos.y < entered_points_as_sphere[1].pos.y:
+        posY = entered_points_as_sphere[0].pos.y
     else:
-        posY = staticPoints[1].pos.y
+        posY = entered_points_as_sphere[1].pos.y
 
     position_x = length_x / 2 + posX
     position_y = length_y / 2 + posY
@@ -212,7 +255,7 @@ def generate_terrain():
     terrain_shape = shapes.points(
         pos=[[0, 0], [0, -length_y - 200], [-length_x, -length_y - 200], [-length_x, -length_y],
              [-length_x - 1000, -length_y],
-             [-length_x - 1000, -length_y - hight_of_terrain], [1000, -length_y - hight_of_terrain], [1000, 0]])
+             [-length_x - 1000, -length_y - height_of_terrain], [1000, -length_y - height_of_terrain], [1000, 0]])
 
     terrain_path = [vec(position_x, position_y, 0),
                     vec(position_x, position_y, depth)]
@@ -231,7 +274,7 @@ def generate_terrain():
                       length=1000,
                       height=1, width=450, color=color_green)
 
-    river = box(pos=vec(position_x, posY - hight_of_cliff, 0),
+    river = box(pos=vec(position_x, posY - height_of_cliff, 0),
                 length=length_x,
                 height=1, width=depth, color=color_blue)
 
@@ -245,12 +288,14 @@ def generate_terrain():
 
     terrain = extrusion(path=terrain_path, shape=terrain_shape, visible=False)
 
-    if (staticPoints[0].pos.x < staticPoints[1].pos.x) and (staticPoints[0].pos.y < staticPoints[1].pos.y):
+    if (entered_points_as_sphere[0].pos.x < entered_points_as_sphere[1].pos.x) and (
+            entered_points_as_sphere[0].pos.y < entered_points_as_sphere[1].pos.y):
         terrain.rotate(angle=pi, axis=vec(0, position_y, 0))
-    elif (staticPoints[1].pos.x < staticPoints[0].pos.x) and (staticPoints[1].pos.y < staticPoints[0].pos.y):
+    elif (entered_points_as_sphere[1].pos.x < entered_points_as_sphere[0].pos.x) and (
+            entered_points_as_sphere[1].pos.y < entered_points_as_sphere[0].pos.y):
         terrain.rotate(angle=pi, axis=vec(0, position_y, 0))
 
-    terrain.pos = vec(position_x, position_y - hight_of_terrain / 2, 0)
+    terrain.pos = vec(position_x, position_y - height_of_terrain / 2, 0)
     terrain.color = vec(0.5, 0.2, 0.02)
 
     generatedTerrain.append(terrain)
@@ -264,8 +309,11 @@ def generate_terrain():
     terrain.visible = True
 
 
-def generate_extra_poles():
-    global hight_of_terrain, hight_of_cliff, posX, posY, length_x, length_y
+def generate_pillars():
+    """
+    Function that generates pillars for the additional static points used by generated bridge
+    """
+    global height_of_terrain, height_of_cliff, posX, posY, length_x, length_y
     over_bridge_level = 200
 
     for picked_point in ai.BridgeEvolution.bridge.points:
@@ -273,17 +321,17 @@ def generate_extra_poles():
             connected = ai.BridgeEvolution.bridge.getConnectedToJoint(picked_point)
             if len(connected) > 0:
                 bridge_level_from_bottom = length_y / length_x * (picked_point.position[0] - posX)
-                final_high = (over_bridge_level + bridge_level_from_bottom + hight_of_terrain)
+                final_high = (over_bridge_level + bridge_level_from_bottom + height_of_terrain)
                 static_pole1 = box(
-                    pos=vec(picked_point.position[0], final_high / 2 - hight_of_terrain + posY, 55),
+                    pos=vec(picked_point.position[0], final_high / 2 - height_of_terrain + posY, 55),
                     length=30,
                     height=final_high, width=10, color=color_concrete)
                 static_pole2 = box(
-                    pos=vec(picked_point.position[0], final_high / 2 - hight_of_terrain + posY, -55),
+                    pos=vec(picked_point.position[0], final_high / 2 - height_of_terrain + posY, -55),
                     length=30,
                     height=final_high, width=10, color=color_concrete)
                 static_bar = box(
-                    pos=vec(picked_point.position[0], final_high - hight_of_terrain + posY - 5, 0),
+                    pos=vec(picked_point.position[0], final_high - height_of_terrain + posY - 5, 0),
                     length=30,
                     height=10, width=100, color=color_concrete)
 
@@ -293,12 +341,19 @@ def generate_extra_poles():
 
 
 def ui():
-    global picking_points, staticPoints, wait_for_click
+    """
+    Main function that run GUI, creates buttons and scene presets
+    """
+    global picking_points, entered_points_as_sphere, wait_for_click
     first_start = True
     t1 = None
     added_static_points = []
 
     def change_way_to_present_bridge(b):
+        """
+        Function that change way to present of the bridge
+        :param b: button that triggered this function
+        """
         global show_natural
         if b.checked:
             show_natural = b.natural
@@ -306,17 +361,18 @@ def ui():
             if i != b.i:
                 radio_buttons[i].checked = False
 
-    def restart_this():
+    def restart():
+        """
+        Function that stops the work of the thread responsible for the simulation,
+         enables a new point input and generation of a new bridge
+        """
         global picking_points, wait_for_click, run_showing_bridge_next_steps
         nonlocal t1
         run_showing_bridge_next_steps = False
         wait_for_click = True
-
-        print("RESTART_THIS")
         if t1 is not None and t1.is_alive():
             t1.raise_exception()
             t1.join()
-
         time.sleep(1)
         picking_points = True
         start_everything()
@@ -326,9 +382,9 @@ def ui():
                    resizable=False)
     materials = Builder.createMaterialsList()
     wtext(text="\n\nMenu: \n\n")
-    button(text="Build initial (pick at least 2 points)", bind=stop_picking_points)
+    button_build_initial = button(text="Build initial (pick at least 2 points)", bind=stop_picking_points)
     button(text="Delete points", bind=delete_points)
-    button(text="RESTART", bind=restart_this)
+    button(text="RESTART", bind=restart)
     wtext(text="\n\nStatic load: ")
     winput(text="", bind=add_static_load, width=300)
     wtext(text=" kg per meter\n\n")
@@ -347,20 +403,32 @@ def ui():
     s = None
 
     def grab(evt):
+        """
+        Function that retrieves the coordinates of a point selected by clicking the mouse
+        :param evt: the event calling this function
+        """
         if picking_points:
             nonlocal s, drag
             scene.title = 'Drag the point'
             drag = True
             s = sphere(pos=evt.pos, radius=2, color=color.red)
-            staticPoints.append(s)
+            entered_points_as_sphere.append(s)
 
     def move(evt):
+        """
+        Function that retrieves the coordinates of a point selected by mouse move
+        :param evt: the event calling this function
+        """
         if picking_points:
             nonlocal drag
             if drag:
                 s.pos = scene.mouse.pos  # evt.pos
 
     def drop(evt):
+        """
+        Function that retrieves the coordinates of a point selected by releasing the mouse button
+        :param evt: the event calling this function
+        """
         if picking_points:
             nonlocal drag
             scene.title = title
@@ -369,8 +437,14 @@ def ui():
             s.pos = scene.mouse.pos
 
     def show_bridge(bridge, position_z, width_of_bridge):
+        """
+        Function that show bridge
+        :param bridge: bridge to pick up connections
+        :param position_z: z coordinates of the first part of the bridge
+        :param width_of_bridge: bridge width
+        """
         picked_lines = pick_lines(bridge)
-        delete_curves()
+        delete_connections()
         delete_road()
 
         print("SHOW BRIDGE")
@@ -379,8 +453,8 @@ def ui():
             list_of_points2 = []
             list_of_points1.append(vector(ln[0], ln[1], position_z))
             list_of_points1.append(vector(ln[2], ln[3], position_z))
-            list_of_points2.append(vector(ln[0], ln[1], position_z+width_of_bridge))
-            list_of_points2.append(vector(ln[2], ln[3], position_z+width_of_bridge))
+            list_of_points2.append(vector(ln[0], ln[1], position_z + width_of_bridge))
+            list_of_points2.append(vector(ln[2], ln[3], position_z + width_of_bridge))
             if show_natural:
                 param = vec(0, 1, 0)
                 rad = 2
@@ -396,7 +470,6 @@ def ui():
                         road_posY = ln[1]
                     else:
                         road_posY = ln[3]
-
                     road_length_x = ln[2] - ln[0]
                     road_length_y = ln[3] - ln[1]
                     road_position_x = abs(road_length_x) / 2 + road_posX
@@ -405,15 +478,12 @@ def ui():
                     road = box(pos=vec(road_position_x, road_position_y, 0), length=road_box_width, height=2,
                                width=100, axis=vec(road_length_x, road_length_y, 0), color=param)
                     generatedRoad.append(road)
-
-
                 elif ln[5].name == "Steel Beam":
                     param = color_steel
                     rad = 2
                 elif ln[5].name == "Wooden Beam":
                     param = color_wood
                     rad = 2
-
                 c1 = curve(pos=list_of_points1, color=param, radius=rad)
                 c2 = curve(pos=list_of_points2, color=param, radius=rad)
                 generated_curves.append(c1)
@@ -439,9 +509,12 @@ def ui():
     scene.bind('mouseup', drop)
 
     def start_everything():
+        """
+        Function that starts the process of entering points and generating a bridge
+        """
         global run_showing_bridge_next_steps, wait_for_click
-        nonlocal first_start, t1
-
+        nonlocal first_start, t1, button_build_initial
+        button_build_initial.text = "Build initial (pick at least 2 points)"
         clear_my_scene()
         scene.axis = vector(0, 0, -1)
         scene.center = vector(canvasWidth / 2.0, canvasHeight / 2.0, 0)
@@ -449,7 +522,7 @@ def ui():
         first_start = False
         print("START_EVERYTHING")
 
-        t1 = thread_with_exception('Thread 1')
+        t1 = BridgeEvolutionThread('Thread 1')
         bridge_obj = None
         point1 = None
         point2 = None
@@ -458,22 +531,23 @@ def ui():
             wait_for_click = False
             rate(10)
 
-        if len(staticPoints) >= 1:
-            point1 = m2d.Vector2(staticPoints[0].pos.x, staticPoints[0].pos.y)
-        if len(staticPoints) >= 2:
-            point2 = m2d.Vector2(staticPoints[1].pos.x, staticPoints[1].pos.y)
-        if len(staticPoints) > 2:
+        if len(entered_points_as_sphere) >= 1:
+            point1 = m2d.Vector2(entered_points_as_sphere[0].pos.x, entered_points_as_sphere[0].pos.y)
+        if len(entered_points_as_sphere) >= 2:
+            point2 = m2d.Vector2(entered_points_as_sphere[1].pos.x, entered_points_as_sphere[1].pos.y)
+        if len(entered_points_as_sphere) > 2:
             it = 0
-            while it < len(staticPoints) - 2:
-                added_static_points.append(m2d.Vector2(staticPoints[it + 2].pos.x, staticPoints[it + 2].pos.y))
+            while it < len(entered_points_as_sphere) - 2:
+                added_static_points.append(
+                    m2d.Vector2(entered_points_as_sphere[it + 2].pos.x, entered_points_as_sphere[it + 2].pos.y))
                 it = it + 1
 
-        number_of_extra_static_points = len(staticPoints) - 2
+        number_of_extra_static_points = len(entered_points_as_sphere) - 2
 
-        if len(staticPoints) == 2:
+        if len(entered_points_as_sphere) == 2:
             bridge_obj = Builder.buildInitial(materials, point1, point2)
             bridge_obj.roadStrains = static_load
-        elif len(staticPoints) > 2:
+        elif len(entered_points_as_sphere) > 2:
             bridge_obj = Builder.buildInitial(materials, point1, point2, number_of_extra_static_points,
                                               added_static_points)
             bridge_obj.roadStrains = static_load
@@ -497,9 +571,9 @@ def ui():
         while run_showing_bridge_next_steps:
             wtext_progress.text = "\n\nProgress: already done %d simulations" % mechanics.executedSimulation
             show_bridge(bridge_obj, -50, 100)
-            delete_extra_poles()
+            delete_pillars()
             if number_of_extra_static_points > 0:
-                generate_extra_poles()
+                generate_pillars()
             if ai.BridgeEvolution.upgrade_still_running:
                 wtext_status.text = "\n\nStatus: simulation in progres"
             elif mechanics.road_broke:
