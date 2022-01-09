@@ -9,12 +9,12 @@ import tbutils.math2d as m2d
 from vpython import *
 import os
 
-canvasWidth = 1600
+canvasWidth = 1200
 canvasHeight = 480
 picking_points = True
 staticPoints = []
 
-static_load = 2000
+static_load = 0
 show_natural = True
 run_showing_bridge_next_steps = True
 wait_for_click = False
@@ -56,10 +56,10 @@ class thread_with_exception(threading.Thread):
     def run(self):
         # target function of the thread class
         try:
-            chamber2 = ai.BridgeEvolution(
+            bridge_evolution = ai.BridgeEvolution(
                 (os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'tbneuralnetwork'))))
-            chamber2.load()
-            chamber2.upgrade("", 1)
+            bridge_evolution.load()
+            bridge_evolution.upgrade("", 1)
 
         finally:
             print('ended')
@@ -309,10 +309,9 @@ def generate_extra_poles():
 
 
 def ui():
+    global picking_points, staticPoints, wait_for_click
     first_start = True
     t1 = None
-    global picking_points, staticPoints, wait_for_click
-
     added_static_points = []
 
     def change_way_to_present_bridge(b):
@@ -427,7 +426,7 @@ def ui():
 
                 elif ln[5].name == "Steel Beam":
                     param = color_steel
-                    rad = 1
+                    rad = 2
                 elif ln[5].name == "Wooden Beam":
                     param = color_wood
                     rad = 2
