@@ -89,12 +89,12 @@ def pick_lines(bridge):
                           connection.getStrain(), connection.material))
     return lines
 
-
-def pick_points(bridge):
-    points = []
-    for point in bridge.points:
-        points.append(point)
-    return points
+    """
+    Help function for ai connection
+    :param genomes: genomes list
+    :param config: genome class configuration data
+    :return: float genome's fitness
+    """
 
 
 def stop_picking_points(b):
@@ -176,15 +176,15 @@ def clear_my_scene():
 def generate_terrain():
     global staticPoints, hight_of_terrain, hight_of_cliff, posX, posY, length_x, length_y, position_x, position_y
     left_point = None
-    rigth_point = None
+    right_point = None
     depth = 1000
 
     if staticPoints[0].pos.x < staticPoints[1].pos.x:
         left_point = staticPoints[0]
-        rigth_point = staticPoints[1]
+        right_point = staticPoints[1]
     else:
         left_point = staticPoints[1]
-        rigth_point = staticPoints[0]
+        right_point = staticPoints[0]
 
     length_x_not_abs = staticPoints[1].pos.x - staticPoints[0].pos.x
     length_y_not_abs = staticPoints[1].pos.y - staticPoints[0].pos.y
@@ -193,8 +193,8 @@ def generate_terrain():
 
     grass_left_position_x = left_point.pos.x - 500
     grass_left_position_y = left_point.pos.y
-    grass_right_position_x = rigth_point.pos.x + 500
-    grass_right_position_y = rigth_point.pos.y
+    grass_right_position_x = right_point.pos.x + 500
+    grass_right_position_y = right_point.pos.y
 
     if staticPoints[0].pos.x < staticPoints[1].pos.x:
         posX = staticPoints[0].pos.x
@@ -267,8 +267,8 @@ def generate_terrain():
 def generate_extra_poles():
     global hight_of_terrain, hight_of_cliff, posX, posY, length_x, length_y
     over_bridge_level = 200
-    picked_points = pick_points(ai.BridgeEvolution.bridge)
-    for picked_point in picked_points:
+
+    for picked_point in ai.BridgeEvolution.bridge.points:
         if picked_point.isStationary:
             connected = ai.BridgeEvolution.bridge.getConnectedToJoint(picked_point)
             if len(connected) > 0:
@@ -370,8 +370,6 @@ def ui():
 
     def show_bridge(bridge, position_z, width_of_bridge):
         picked_lines = pick_lines(bridge)
-        # picked_points = pick_points(bridge)
-
         delete_curves()
         delete_road()
 
