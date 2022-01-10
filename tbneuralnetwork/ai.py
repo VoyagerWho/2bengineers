@@ -119,7 +119,7 @@ class BridgeEvolution:
             [BridgeEvolution.simulation_time, BridgeEvolution.strain, BridgeEvolution.break_moments] \
                 = sim.simulate(BridgeEvolution.bridge)
             create_inputs()
-            BridgeEvolution.budget = 1.1*sum(con.cost for con in BridgeEvolution.bridge.connections)
+            BridgeEvolution.budget = 0.9 * sum(con.cost for con in BridgeEvolution.bridge.connections)
             # learning of joint:
             
             # print(inputs_c)
@@ -182,7 +182,7 @@ class BridgeEvolution:
             [BridgeEvolution.simulation_time, BridgeEvolution.strain, BridgeEvolution.break_moments] \
                 = sim.simulate(BridgeEvolution.bridge)
             create_inputs()
-            BridgeEvolution.budget = 1.1 * sum(con.cost for con in BridgeEvolution.bridge.connections)
+            BridgeEvolution.budget = 0.9 * sum(con.cost for con in BridgeEvolution.bridge.connections)
             print(inputs_c)
             print(inputs_j)
             global bridge_copy
@@ -214,14 +214,15 @@ class BridgeEvolution:
 
 def score(bridge: Bridge, max_strain: float, cost: float):
     """
-
+    Utility function to calculate resulting score of the simulation for genome fitness value
+    :param bridge: tested structure
     :param max_strain: maximum value of strain in simulation
     :param cost: cost of the structure
     :return: float: score of the model
     """
     cost_offset = 0.5 * math.atan(0.01 * (BridgeEvolution.budget - cost)) / math.pi
     if bridge.isSemiValid():
-        return 1 - max_strain**2 + cost_offset
+        return 1 - math.sqrt(max_strain) + cost_offset
     return 0.5 + cost_offset
 
 
