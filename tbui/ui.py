@@ -9,7 +9,7 @@ import tbutils.math2d as m2d
 from vpython import *
 import os
 
-canvasWidth = 1200
+canvasWidth = 1400
 canvasHeight = 480
 picking_points = True
 entered_points_as_sphere = []
@@ -376,24 +376,32 @@ def ui():
         picking_points = True
         start_everything()
 
+
+    title = "<html><body><p style=\"text-align:center;font-size:20px;color:gray;font-family:verdana;font-weight: bold;\">Optimizer for the evolutionary generated frame structures</p></body></html>"
+
     scene = canvas(width=canvasWidth, height=canvasHeight,
                    center=vector(canvasWidth / 2.0, canvasHeight / 2.0, 0), background=color_background,
-                   resizable=False)
+                   resizable=False, title=title)
+
     materials = Builder.createMaterialsList()
-    wtext(text="\n\nMenu: \n\n")
+    help_string = "\nClick and drag the mouse to insert static point.\n"
+    wtext_help = wtext(text=help_string)
     button_build_initial = button(text="Build initial (pick at least 2 points)", bind=stop_picking_points)
     button(text="Delete points", bind=delete_points)
-    button(text="RESTART", bind=restart)
-    wtext(text="\n\nStatic load: ")
+    button(text="Restart", bind=restart)
+    radio_strain = radio(bind=change_way_to_present_bridge, text="Show strain", i=0, natural=False)
+    radio_natural = radio(bind=change_way_to_present_bridge, text="Show used materials", i=1, natural=True)
+    radio_buttons = [radio_strain, radio_natural]
+    wtext(text="\tStatic load: ")
     winput(text="", bind=add_static_load, width=300)
     wtext(text=" kg per meter\n\n")
-    radio_strain = radio(bind=change_way_to_present_bridge, text="Show strain", i=0, natural=False)
-    radio_natural = radio(bind=change_way_to_present_bridge, text="Show used materials\n\n", i=1, natural=True)
-    radio_buttons = [radio_strain, radio_natural]
-    wtext_status = wtext(text="\n\nStatus: picking points ")
-    wtext_progress = wtext(text="\n\nProgress: -")
-    title = "Click and drag the mouse to insert static point."
-    scene.title = title
+    wtext(text="To take full advantage of the 3D functionality: "
+               "\n\t1. press ctrl + press the left mouse button and move the mouse to rotate"
+               "\n\t2. press shift + press the left mouse button and move the mouse to move.")
+
+    wtext_status = wtext(text="\n\nStatus: picking points")
+    wtext_progress = wtext(text="\t|\tProgress: -")
+    wtext_authors = wtext(text="\n\nAuthors: Joanna Baczewska, Paweł Bielecki, Sławomir Klimowski")
 
     b = box(pos=vector(0, 0, 0), color=color.green)
     b.visible = False
@@ -408,7 +416,7 @@ def ui():
         """
         if picking_points:
             nonlocal s, drag
-            scene.title = 'Drag the point'
+            wtext_help.text="\nDrag the point\n"
             drag = True
             s = sphere(pos=evt.pos, radius=2, color=color.red)
             entered_points_as_sphere.append(s)
@@ -430,7 +438,7 @@ def ui():
         """
         if picking_points:
             nonlocal drag
-            scene.title = title
+            wtext_help.text = help_string
             s.color = color.cyan
             drag = False
             s.pos = scene.mouse.pos
@@ -513,11 +521,11 @@ def ui():
         """
         global run_showing_bridge_next_steps
         nonlocal first_start, t1, button_build_initial
+        wtext_help.text=help_string
         button_build_initial.text = "Build initial (pick at least 2 points)"
         clear_my_scene()
         scene.axis = vector(0, 0, -1)
         scene.center = vector(canvasWidth / 2.0, canvasHeight / 2.0, 0)
-
         first_start = False
         print("START_EVERYTHING")
 
@@ -561,13 +569,15 @@ def ui():
         ai.BridgeEvolution.upgrade_still_running = True
 
         t1.start()
+
+        wtext_help.text="\nThe simulation is currently in progress, to start entering points again, click the Restart button\n"
         wtext_status.text = "\n\nStatus: simulation in progres."
         scene.axis = vector(-0.449187, -0.572867, -0.685605)
         scene.center = vector(position_x, position_y, 0)
 
         run_showing_bridge_next_steps = True
         while run_showing_bridge_next_steps:
-            wtext_progress.text = "\n\nProgress: already done %d simulations" % mechanics.executedSimulation
+            wtext_progress.text = "\t|\tProgress: already done %d simulations" % mechanics.executedSimulation
             show_bridge(bridge_obj, -50, 100)
             delete_pillars()
             if number_of_extra_static_points > 0:
