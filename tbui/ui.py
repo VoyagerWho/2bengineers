@@ -367,9 +367,10 @@ def ui():
          enables a new point input and generation of a new bridge
         """
         global picking_points, wait_for_click, run_showing_bridge_next_steps
-        nonlocal t1
+        nonlocal t1, added_static_points
         run_showing_bridge_next_steps = False
         wait_for_click = True
+        added_static_points = []
         if t1 is not None and t1.is_alive():
             t1.raise_exception()
             t1.join()
