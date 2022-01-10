@@ -34,6 +34,12 @@ class Joint:
         self.indexOnBridge: int = 0
 
     def move(self, time: float, expResistance: float):
+        """
+        Simulates one time step with using resistance.
+        :param time: period for simulation
+        :param expResistance: value of exp(resistance)
+        
+        """
         if (not self.isStationary) and (self.inertia != 0):
             dv: m2.Vector2 = self.forces * (time / self.inertia)
             self.position += (self.velocity + dv / 2) * time
@@ -42,11 +48,17 @@ class Joint:
         return self
     
     def prepare(self):
+        """
+        Zeroes variables before any time step.
+        """
         self.forces.x = 0.0
         self.forces.y = 0.0
         self.inertia = 0.0
 
     def assign(self, j):
+        """
+        Copy all values from j - another instance of Joint.
+        """
         self.position = j.position.copy()
         self.forces = j.forces.copy()
         self.isStationary = j.isStationary
@@ -54,11 +66,17 @@ class Joint:
         self.inertia = j.inertia
 
     def copy(self):
+        """
+        Makes copy of the joint.
+        """        
         c = Joint(self.position)
         c.assign(self)
         return c
 
     def calcDelta(self, j):
+        """
+        Calculates error between self and j.
+        """        
         if not self.isStationary:
             mf : float = (self.forces.length() + j.forces.length())/2
             return (self.forces - j.forces).length()/(mf+1.0)
@@ -98,6 +116,9 @@ class Connection:
             self.stretchForceRate) + "\tBroken: " + str(self.broken)
 
     def updateLength(self):
+        """
+        Calculates length as distance between jointA and jointB
+        """
         self.length: float = (self.jointA.position - self.jointB.position).length()
 
     @staticmethod
@@ -117,6 +138,9 @@ class Connection:
         return c
 
     def getForce(self):  # for jointA / Force jointB = - Force jointA
+        """
+        Returns force which is made by the connection.
+        """
         v: m2.Vector2 = (self.jointA.position - self.jointB.position)
         currentLength: float = v.length()
         if currentLength < self.length:
@@ -126,6 +150,9 @@ class Connection:
         return m2.Vector2()
 
     def addForces(self, gravity: m2.Vector2 = m2.Vector2()):
+        """
+        Adds made forces to joints.
+        """
         if not self.broken:
             forces: m2.Vector2 = self.getForce()
             gm: m2.Vector2 = gravity * ((self.mass + self.additionalMass) / 2)
@@ -133,11 +160,17 @@ class Connection:
             self.jointB.forces += gm - forces
 
     def addInertia(self):
+        """
+        Adds intertia forces to joints.
+        """
         if not self.broken:
             self.jointA.inertia += (self.mass + self.additionalMass) / 2
             self.jointB.inertia += (self.mass + self.additionalMass) / 2
 
-    def getStrain(self):  # do animacji
+    def getStrain(self):  
+        """
+        Returns strain of the connection. It is between 0 and 1.
+        """
         if self.broken:
             return 1
         v: m2.Vector2 = (self.jointA.position - self.jointB.position)
@@ -155,6 +188,9 @@ class Connection:
         return 0
 
     def checkBreaking(self):
+        """
+        Checks if connection is broken (because it is too long or too short).
+        """
         if not self.broken:
             v: m2.Vector2 = (self.jointA.position - self.jointB.position)
             currentLength: float = v.length()
@@ -165,6 +201,9 @@ class Connection:
         return self.broken
 
     def copy(self):
+        """
+        Makes copy of the joint. 
+        """
         c = Connection(jointA=self.jointA, jointB=self.jointB, mass=self.mass, maxCompression=self.maxCompression,
                        compressionForceRate=self.compressionForceRate,
                        maxStretch=self.maxStretch, stretchForceRate=self.stretchForceRate)
@@ -220,6 +259,9 @@ class Bridge:
         self.roadStrains = roadStrains
 
     def copy(self):
+        """
+        Makes depth copy of the bridge.
+        """
         b = Bridge(roadStrains=self.roadStrains)
         b.materials = self.materials.copy()
 
@@ -238,6 +280,7 @@ class Bridge:
     def getModelForRender(self, size: (int, int) = None,
                           bounds: float = 1.3):
         """
+        Returns vector model of the bridge.
         :param size:
         :param bounds:
         :return: tuple of two lists of tuples: with lines: (x1, y1, x2, y2, strain), with joints: (x, y, isStationary)
@@ -279,6 +322,9 @@ class Bridge:
         return lines, points
 
     def render(self, fileName: str, width: int = 640, height: int = 480, bounds: float = 1.3, model=None):
+        """
+        Renders the bridge to a png file.
+        """
 
         from PIL import Image, ImageDraw
 
@@ -330,15 +376,29 @@ class Bridge:
         return [con for con in self.connections if con.jointA == joint or con.jointB == joint]
     
     def getKineticEnergy(self, gravity : m2.Vector2 = m2.Vector2(0, -9.81)):
+        """
+        Returns kinetic energy of the bridge.
+        """
         return sum(sqr(j.velocity.length()) * j.inertia / 2 - j.position * gravity for j in self.points)
 
     def getPotentialEnergy(self, gravity : m2.Vector2 = m2.Vector2(0, -9.81)):
+        """
+        Returns potential energy of the bridge.
+        """
         return sum( - j.position * gravity for j in self.points)
 
     def getEnergy(self, gravity : m2.Vector2 = m2.Vector2(0, -9.81)):
+        """
+        Returns sum of potential and kinetic energy of the bridge. 
+        Do not calculate spring energy.
+        """
         return self.getPotentialEnergy(gravity) + self.getKineticEnergy(gravity)
     
     def relaxPendulums(self, gravity : m2.Vector2 = m2.Vector2(0, -9.81)):
+        """
+        Stops all single pendulums (single connections).
+        """
+        
         for i, j in enumerate(self.points):
             j.indexOnBridge = i
             j.connectionCount = 0
@@ -367,6 +427,10 @@ class Bridge:
                 c.jointB.position = c.jointA.position + gravityTensor * c.length
 
     def removeFallings(self):
+        """
+        Removes all bridge parts which are not connected with any stationary point or another point which is not falling.
+        By default every connection is falling.
+        """
         for j in self.points:
             j.isConnectedWithStationary = j.isStationary
         
@@ -386,15 +450,24 @@ class Bridge:
             con.broken = not status                        
         
     def setSoften(self, newSoften: float):
+        """
+        Set spring forces of all materials.
+        """
         for con in self.connections:
             con.soften = newSoften    
             
     def checkFalls(self, gravity, trigger: float = 1e9):
+        """
+        Checks if some part of bridge fallen down.
+        """
         for c in self.connections:
             if max(c.jointA.position * gravity, c.jointB.position * gravity) >= trigger:
                 c.broken = True      
                 
     def addAdditionalMassToConnections(self):
+        """
+        Adds additional mass to the road (like tanks etc.).
+        """
         for con in self.connections:
             if con.material == self.materials[0]:
                 con.additionalMass = con.length * self.roadStrains

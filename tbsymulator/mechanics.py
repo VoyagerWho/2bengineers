@@ -10,7 +10,7 @@ def simulateTimeStep(bridge, timeStep: float = 1e-6, gravity: m2.Vector2 = m2.Ve
                      toleranceCountDependent: bool = False, safeBreaking: bool = False, relaxationMode: float = 0.0, enableBreaks: bool = True):
     """
     Function for calculating the next time step for the bridge
-    :param bridge: The bridge which is sumulated.
+    :param bridge: The bridge which is simulated.
     :param timeStep: On the first step: any positive real number, on the each following step: the result of this function.
     :param gravity: Everyone knows what it is.
     :param resistance: Value for breaking the velocity of each part of the bridge.
@@ -19,6 +19,7 @@ def simulateTimeStep(bridge, timeStep: float = 1e-6, gravity: m2.Vector2 = m2.Ve
     :param toleranceCountDependent: In case of breaking and realBrakes==True the tolerance will be increased if the count of points will increase.
     :param safeBreaking: When realBrakes==True the created connections has two times more strength to avoid subsequent breaks of them. 
     :param relaxationMode: When timeStep is less than the relaxationMode, velocity is divided by two. It makes slow bridge relaxation. If the value is different than zero, the simulations cannot be used for live-movements (simulating where the parts' velocity and momentum has matter) - for example for simulating the bridge's behavior during an eartch quake or during its destroying.
+    :param enableBreaks: If False nothing will break.
     """
     
     copyJoints = []
@@ -172,8 +173,14 @@ def checkIfBridgeWillSurvive(bridge, accelerationTolerance: float = 1e-3, minTim
 
 frameID = 0 #remove after debug
 
-def simulate(bridge, minTimeStep: float = 1e-6, maxTime: float = 5.0,
-             interval: float = 0.05, gravity: m2.Vector2 = m2.Vector2(0, -9.81), accelerationTolerance : float = 1e-2, minTolerance : float = 1e-3):
+def simulate(bridge, interval: float = 0.05, gravity: m2.Vector2 = m2.Vector2(0, -9.81), accelerationTolerance : float = 1e-2, minTolerance : float = 1e-3):
+    """
+    Makes all simulation of teh bridge til it is relaxed or road break.
+    :param bridge: Bridge for simulation.
+    :param interval: Interval of printing information about the simulation.
+    :param gravity: What it is everyone knows.
+    :param accelerationTolerance: Simulation stops when acceleration of all points is under the value.
+    """
     print("Starting new simulation")
     global road_broke
     time = 0
