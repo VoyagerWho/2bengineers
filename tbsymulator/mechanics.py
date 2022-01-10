@@ -18,7 +18,7 @@ def simulateTimeStep(bridge, timeStep: float = 1e-6, gravity: m2.Vector2 = m2.Ve
     :param realBreakes: For True - broken bridge connection is divided into two connections with points in half of the original connection.
     :param toleranceCountDependent: In case of breaking and realBrakes==True the tolerance will be increased if the count of points will increase.
     :param safeBreaking: When realBrakes==True the created connections has two times more strength to avoid subsequent breaks of them. 
-    :param relaxationMode: When timeStep is less than the relaxationMode, velocity is divided by two. It makes slow bridge relaxation. If the value is different than zero, the simulations cannot be used for live-movements (simulating where the parts' velocity and momentum has matter) - for example for simulating the bridge's behavior during an eartch quake or during its destroying.
+    :param relaxationMode: When timeStep is less than the relaxationMode, velocity is divided by two. It makes slow bridge relaxation. If the value is different than zero, the simulations cannot be used for live-movements (simulating where the parts' velocity and momentum has matter) - for example for simulating the bridge's behavior during an earthquake or during its destroying.
     :param enableBreaks: If False nothing will break.
     """
     
