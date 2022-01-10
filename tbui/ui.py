@@ -51,6 +51,7 @@ class BridgeEvolutionThread(threading.Thread):
     Thread class that starts the evolution of the bridge.
     Allows an exception to be thrown that terminates the bridge simulation.
     """
+
     def __init__(self, name):
         """
         Class initialization
@@ -215,7 +216,7 @@ def generate_terrain():
     """
     Function that generates terrain elements and displays on the scene
     """
-    global entered_points_as_sphere, height_of_terrain, height_of_cliff,\
+    global entered_points_as_sphere, height_of_terrain, height_of_cliff, \
         posX, posY, length_x, length_y, position_x, position_y
     left_point = None
     right_point = None
@@ -369,13 +370,13 @@ def ui():
         nonlocal t1, added_static_points
         run_showing_bridge_next_steps = False
         added_static_points = []
+        mechanics.executedSimulation = 0
         if t1 is not None and t1.is_alive():
             t1.raise_exception()
             t1.join()
         time.sleep(1)
         picking_points = True
         start_everything()
-
 
     title = "<html><body><p style=\"text-align:center;font-size:20px;color:gray;font-family:verdana;font-weight: bold;\">Optimizer for the evolutionary generated frame structures</p></body></html>"
 
@@ -416,7 +417,7 @@ def ui():
         """
         if picking_points:
             nonlocal s, drag
-            wtext_help.text="\nDrag the point\n"
+            wtext_help.text = "\nDrag the point\n"
             drag = True
             s = sphere(pos=evt.pos, radius=2, color=color.red)
             entered_points_as_sphere.append(s)
@@ -521,7 +522,7 @@ def ui():
         """
         global run_showing_bridge_next_steps
         nonlocal first_start, t1, button_build_initial
-        wtext_help.text=help_string
+        wtext_help.text = help_string
         button_build_initial.text = "Build initial (pick at least 2 points)"
         clear_my_scene()
         scene.axis = vector(0, 0, -1)
@@ -570,7 +571,7 @@ def ui():
 
         t1.start()
 
-        wtext_help.text="\nThe simulation is currently in progress, to start entering points again, click the Restart button\n"
+        wtext_help.text = "\nThe simulation is currently in progress, to start entering points again, click the Restart button\n"
         wtext_status.text = "\n\nStatus: simulation in progres."
         scene.axis = vector(-0.449187, -0.572867, -0.685605)
         scene.center = vector(position_x, position_y, 0)
