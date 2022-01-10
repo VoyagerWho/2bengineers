@@ -18,7 +18,6 @@ entered_points = []
 static_load = 0
 show_natural = True
 run_showing_bridge_next_steps = True
-wait_for_click = False
 
 #
 generated_curves = []
@@ -344,7 +343,7 @@ def ui():
     """
     Main function that run GUI, creates buttons and scene presets
     """
-    global picking_points, entered_points_as_sphere, wait_for_click
+    global picking_points, entered_points_as_sphere
     first_start = True
     t1 = None
     added_static_points = []
@@ -366,10 +365,9 @@ def ui():
         Function that stops the work of the thread responsible for the simulation,
          enables a new point input and generation of a new bridge
         """
-        global picking_points, wait_for_click, run_showing_bridge_next_steps
+        global picking_points, run_showing_bridge_next_steps
         nonlocal t1, added_static_points
         run_showing_bridge_next_steps = False
-        wait_for_click = True
         added_static_points = []
         if t1 is not None and t1.is_alive():
             t1.raise_exception()
@@ -513,7 +511,7 @@ def ui():
         """
         Function that starts the process of entering points and generating a bridge
         """
-        global run_showing_bridge_next_steps, wait_for_click
+        global run_showing_bridge_next_steps
         nonlocal first_start, t1, button_build_initial
         button_build_initial.text = "Build initial (pick at least 2 points)"
         clear_my_scene()
@@ -529,7 +527,6 @@ def ui():
         point2 = None
 
         while picking_points:
-            wait_for_click = False
             rate(10)
 
         if len(entered_points_as_sphere) >= 1:
