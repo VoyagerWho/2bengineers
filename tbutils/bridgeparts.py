@@ -235,7 +235,6 @@ class Connection:
         """
         Utility method to update length dependant attributes
         """
-
         self.length = (self.jointA.position - self.jointB.position).length()
         self.mass = self.length * self.material.linDen
         self.cost = self.length * self.material.cost

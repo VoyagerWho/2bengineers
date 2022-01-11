@@ -107,7 +107,7 @@ def simulateTimeStepForAI(bridge, timeStep: float = 1e-6, tol: float = 1e-3, tol
     Alias for simulateTimeStep, but with some predifinied default parameters which makes the simulation faster.
     Warning: It uses relaxationValue (alias for: relaxationMode) different than zero.
     """
-    return simulateTimeStep(bridge = bridge, timeStep = timeStep, tol = tol, toleranceCountDependent = toleranceCountDependent, gravity = gravity, resistance = 0.0, relaxationMode = relaxationValue, enableBreaks=enableBreaks)
+    return simulateTimeStep(bridge = bridge, timeStep = timeStep, tol = tol, toleranceCountDependent = toleranceCountDependent, gravity = gravity, resistance=0.1, relaxationMode = relaxationValue, enableBreaks=enableBreaks)
 
 
 def relaxBridge(bridge, initSoften: float = 1e7, accelerationTolerance: float = 1e-3, gravity: m2.Vector2 = m2.Vector2(0, -9.81)):
