@@ -28,10 +28,12 @@ class Joint:
     def __init__(self, position: m2.Vector2, stationary: bool = False):
         self.position: m2.Vector2 = m2.Vector2(position)
         self.forces: m2.Vector2 = m2.Vector2()
+        self.additionalForce: m2.Vector2 = m2.Vector2()
         self.isStationary: bool = stationary
         self.velocity: m2.Vector2 = m2.Vector2()
         self.inertia: float = 0
         self.indexOnBridge: int = 0
+        self.assignOriginalPosition()
 
     def move(self, time: float, expResistance: float):
         """
@@ -42,7 +44,7 @@ class Joint:
         """
         if (not self.isStationary) and (self.inertia != 0):
             dv: m2.Vector2 = self.forces * (time / self.inertia)
-            self.position += (self.velocity + dv / 2) * time
+            self.position += (self.velocity + dv / 2.0) * time
             self.velocity += dv
             self.velocity *= expResistance  # exp(-time * resistance)
         return self
@@ -51,8 +53,8 @@ class Joint:
         """
         Zeroes variables before any time step.
         """
-        self.forces.x = 0.0
-        self.forces.y = 0.0
+        self.forces.x = self.additionalForce.x
+        self.forces.y = self.additionalForce.y
         self.inertia = 0.0
 
     def assign(self, j):
@@ -81,6 +83,12 @@ class Joint:
             mf : float = (self.forces.length() + j.forces.length())/2
             return (self.forces - j.forces).length()/(mf+1.0)
         return 0.0
+    
+    def getDisplacement(self):
+        return self.position - self.originalPosition
+    
+    def assignOriginalPosition(self):
+        self.originalPosition = self.position.copy()
 
     def __str__(self):
         return "Position = " + str(self.position) + "\tVelocity = " + str(self.velocity) + "\tForces = " + str(
@@ -120,6 +128,8 @@ class Connection:
         Calculates length as distance between jointA and jointB
         """
         self.length: float = (self.jointA.position - self.jointB.position).length()
+        self.jointA.assignOriginalPosition()
+        self.jointB.assignOriginalPosition()
 
     @staticmethod
     def makeCFM(jointA: Joint, jointB: Joint, material):
@@ -141,12 +151,13 @@ class Connection:
         """
         Returns force which is made by the connection.
         """
-        v: m2.Vector2 = (self.jointA.position - self.jointB.position)
-        currentLength: float = v.length()
-        if currentLength < self.length:
-            return v.normal() * (-self.compressionForceRate * (currentLength - self.length) / self.soften)
-        if currentLength > self.length:
-            return v.normal() * (-self.stretchForceRate * (currentLength - self.length) / self.soften)
+        if self.length > 0:
+            v: m2.Vector2 = (self.jointA.position - self.jointB.position)
+            currentLength: float = v.length()
+            if currentLength < self.length:
+                return v.normal() * (-self.compressionForceRate * (currentLength - self.length) / self.length / self.soften)
+            if currentLength > self.length:
+                return v.normal() * (-self.stretchForceRate * (currentLength - self.length) / self.length / self.soften)
         return m2.Vector2()
 
     def addForces(self, gravity: m2.Vector2 = m2.Vector2()):
@@ -186,6 +197,10 @@ class Connection:
             return min(1.0, abs((currentLength - self.length) / self.length / (self.maxStretch - 1)))
 
         return 0
+    
+    def getPressure(self):
+        return self.getForce().length() / self.material.gauge 
+        #return abs(((((self.jointA.position - self.jointB.position).length() - self.length) / self.length)) * self.material.raw.youngModule)
 
     def checkBreaking(self):
         """
@@ -277,12 +292,12 @@ class Bridge:
         return b
 
     def getModelForRender(self, size: (int, int) = None,
-                          bounds: float = 1.3):
+                          bounds: float = 1.3, displacementScale: float=1.0):
         """
         Returns vector model of the bridge.
         :param size:
         :param bounds:
-        :return: tuple of two lists of tuples: with lines: (x1, y1, x2, y2, strain), with joints: (x, y, isStationary)
+        :return: tuple of two lists of tuples: with lines: (x1, y1, x2, y2, strain, force), with joints: (x, y, isStationary)
         """
         lines = []
         points = []
@@ -298,6 +313,7 @@ class Bridge:
         rx: float = 0.0
         ry: float = 0.0
         k: float = 1.0
+        displacementScale -= 1.0;
 
         if size is not None:
             maxX: float = max([p.position.x for p in self.points if p.isStationary], default=0.0)
@@ -311,16 +327,19 @@ class Bridge:
 
         for connection in self.connections:
             if not connection.broken:
-                lines.append(((connection.jointA.position.x + rx) * k, (connection.jointA.position.y + ry) * k,
-                              (connection.jointB.position.x + rx) * k, (connection.jointB.position.y + ry) * k,
-                              connection.getStrain()))
+                displacementA = connection.jointA.getDisplacement() * displacementScale
+                displacementB = connection.jointB.getDisplacement() * displacementScale
+                lines.append(((connection.jointA.position.x + displacementA.x + rx) * k, (connection.jointA.position.y + displacementA.y + ry) * k,
+                              (connection.jointB.position.x + displacementB.x + rx) * k, (connection.jointB.position.y + displacementB.y + ry) * k,
+                              connection.getStrain(), connection.getForce().length()))
 
         for point in self.points:
-            points.append(((point.position.x + rx) * k, (point.position.y + ry) * k, point.isStationary))
+            displacement = point.getDisplacement() * displacementScale
+            points.append(((point.position.x + displacement.x + rx) * k, (point.position.y + displacement.y + ry) * k, point.isStationary))
 
         return lines, points
 
-    def render(self, fileName: str, width: int = 640, height: int = 480, bounds: float = 1.3, model=None):
+    def render(self, fileName: str, width: int = 640, height: int = 480, bounds: float = 1.3, model=None, drawForces: bool=False, displacementScale: float=1.0):
         """
         Renders the bridge to a png file.
         """
@@ -331,11 +350,15 @@ class Bridge:
         draw = ImageDraw.Draw(image)
 
         if model is None:
-            model = self.getModelForRender((width, height), bounds)
+            model = self.getModelForRender((width, height), bounds, displacementScale=displacementScale)
+            
+        if drawForces:
+            forceScale = 1.0/max(line[5] for line in model[0])            
 
         for line in model[0]:
+            color = line[5]*forceScale if drawForces else line[4]
             draw.line([(line[0], height - line[1] - 1), (line[2], height - line[3] - 1)], width=5,
-                      fill=(int(255 * line[4]) + int(255 - 255 * line[4]) * 256), joint="curve")
+                      fill=(int(255 * color) + int(255 - 255 * color) * 256), joint="curve")
 
         colors = {True: "purple", False: "red"}
 
@@ -581,8 +604,11 @@ class RawMaterial:
             subname = self.name
         if customDesc is None:
             customDesc = self.desc
-        return Material(subname, maxLength, linearDensity=gauge * self.density,
+        material =  Material(subname, maxLength, linearDensity=gauge * self.density,
                         maxCompression={False: 1 - self.yieldStrength / self.youngModule, True: 0.0}[line],
-                        compressionForceRate={False: self.youngModule, True: 0.0}[line],
-                        maxStretch=1 + self.yieldStrength / self.youngModule, stretchForceRate=self.youngModule,
+                        compressionForceRate={False: self.youngModule, True: 0.0}[line] * gauge,
+                        maxStretch=1 + self.yieldStrength / self.youngModule, stretchForceRate=self.youngModule * gauge,
                         costPerUnit=self.cost * gauge, desc=customDesc)
+        material.gauge = gauge
+        material.raw = self
+        return material

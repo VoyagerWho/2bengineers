@@ -147,3 +147,4 @@ tests/test_tbsymulator/*.png
 tests/test_tbsymulator/*.mp4
 tests/test_tbsymulator/.directory
 unusedCode.txt
+.directory
