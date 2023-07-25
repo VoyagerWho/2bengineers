@@ -252,7 +252,7 @@ class Bridge:
     Road materials at different indexes will not be recognised as valid road material
     """
 
-    def __init__(self, roadStrains : float = 0.0): # road strains in kg per meter
+    def __init__(self, roadStrains : float = 0.0):  # road strains in kg per meter
         self.points = []
         self.connections = []
         self.materials = []
@@ -527,7 +527,7 @@ class Material:
 
     def __init__(self, name: str, maxLength: float, linearDensity: float,
                  maxCompression: float, compressionForceRate: float,
-                 maxStretch: float, stretchForceRate: float, costPerUnit: float, desc: str = ""):
+                 maxStretch: float, stretchForceRate: float, costPerUnit: float, surface: float, desc: str = ""):
         """
         Basic method of creating material with its main properties
         :param name: name of the material
@@ -548,6 +548,7 @@ class Material:
         self.maxStr: float = maxStretch
         self.strFR: float = stretchForceRate
         self.cost: float = costPerUnit
+        self.surf: float = surface
         self.desc: str = str(desc)
 
     def __str__(self):
@@ -586,4 +587,4 @@ class RawMaterial:
                         maxCompression={False: 1 - self.yieldStrength / self.youngModule, True: 0.0}[line],
                         compressionForceRate={False: self.youngModule, True: 0.0}[line],
                         maxStretch=1 + self.yieldStrength / self.youngModule, stretchForceRate=self.youngModule,
-                        costPerUnit=self.cost * gauge, desc=customDesc)
+                        costPerUnit=self.cost * gauge, surface=gauge, desc=customDesc)

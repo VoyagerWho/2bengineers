@@ -9,7 +9,7 @@ import os
 import math
 
 import neat
-import tbsymulator.mechanics as sim
+import tbsymulator.mechanicsFEM as sim
 from tbutils.bridgeparts import Bridge
 import tbneuralnetwork.nueralnetworkfunctions as nnf
 import pickle
@@ -95,6 +95,11 @@ class BridgeEvolution:
         self.winner_j = None
         self.winner_c = None
 
+        #
+        self.simulation_time = 0
+        self.strain = []
+        self.break_moments = []
+
     def set_reporter(self):
         """
         Helper function that turns on evolution progress displays on stdout
@@ -114,8 +119,8 @@ class BridgeEvolution:
         if BridgeEvolution.bridge is not None:
             global inputs_j
             global inputs_c
-            inputs_j = [() for _ in range(len(BridgeEvolution.bridge.points))]
-            inputs_c = [() for _ in range(len(BridgeEvolution.bridge.connections))]
+            inputs_j = [() for _ in BridgeEvolution.bridge.points]
+            inputs_c = [() for _ in BridgeEvolution.bridge.connections]
             [BridgeEvolution.simulation_time, BridgeEvolution.strain, BridgeEvolution.break_moments] \
                 = sim.simulate(BridgeEvolution.bridge)
             create_inputs()
@@ -136,8 +141,8 @@ class BridgeEvolution:
             alter_bridge_j(output, BridgeEvolution.bridge)
             bridge_copy = BridgeEvolution.bridge.copy()
             BridgeEvolution.bridge.render("Train_joint.png")
-            inputs_j = [() for _ in range(len(BridgeEvolution.bridge.points))]
-            inputs_c = [() for _ in range(len(BridgeEvolution.bridge.connections))]
+            inputs_j = [() for _ in BridgeEvolution.bridge.points]
+            inputs_c = [() for _ in BridgeEvolution.bridge.connections]
             [BridgeEvolution.simulation_time, BridgeEvolution.strain, BridgeEvolution.break_moments] \
                 = sim.simulate(BridgeEvolution.bridge)
             create_inputs()
@@ -177,8 +182,8 @@ class BridgeEvolution:
         if BridgeEvolution.bridge is not None:
             global inputs_j
             global inputs_c
-            inputs_j = [() for _ in range(len(BridgeEvolution.bridge.points))]
-            inputs_c = [() for _ in range(len(BridgeEvolution.bridge.connections))]
+            inputs_j = [() for _ in BridgeEvolution.bridge.points]
+            inputs_c = [() for _ in BridgeEvolution.bridge.connections]
             [BridgeEvolution.simulation_time, BridgeEvolution.strain, BridgeEvolution.break_moments] \
                 = sim.simulate(BridgeEvolution.bridge)
             create_inputs()
@@ -191,8 +196,8 @@ class BridgeEvolution:
                 net = neat.nn.FeedForwardNetwork.create(self.winner_j, self.config_j)
                 output = [net.activate(xi) for xi in inputs_j]
                 alter_bridge_j(output, BridgeEvolution.bridge)
-                inputs_j = [() for _ in range(len(BridgeEvolution.bridge.points))]
-                inputs_c = [() for _ in range(len(BridgeEvolution.bridge.connections))]
+                inputs_j = [() for _ in BridgeEvolution.bridge.points]
+                inputs_c = [() for _ in BridgeEvolution.bridge.connections]
                 [BridgeEvolution.simulation_time, BridgeEvolution.strain, BridgeEvolution.break_moments] \
                     = sim.simulate(BridgeEvolution.bridge)
                 create_inputs()
@@ -202,8 +207,8 @@ class BridgeEvolution:
                 net = neat.nn.FeedForwardNetwork.create(self.winner_j, self.config_j)
                 output = [net.activate(xi) for xi in inputs_j]
                 alter_bridge_j(output, BridgeEvolution.bridge)
-                inputs_j = [() for _ in range(len(BridgeEvolution.bridge.points))]
-                inputs_c = [() for _ in range(len(BridgeEvolution.bridge.connections))]
+                inputs_j = [() for _ in BridgeEvolution.bridge.points]
+                inputs_c = [() for _ in BridgeEvolution.bridge.connections]
                 [BridgeEvolution.simulation_time, BridgeEvolution.strain, BridgeEvolution.break_moments] \
                     = sim.simulate(BridgeEvolution.bridge)
                 create_inputs()
@@ -212,16 +217,16 @@ class BridgeEvolution:
         BridgeEvolution.upgrade_still_running = False
 
 
-def score(bridge: Bridge, max_strain: float, cost: float):
+def score(bridge_local: Bridge, max_strain: float, cost: float):
     """
     Utility function to calculate resulting score of the simulation for genome fitness value
-    :param bridge: tested structure
+    :param bridge_local: tested structure
     :param max_strain: maximum value of strain in simulation
     :param cost: cost of the structure
     :return: float: score of the model
     """
     cost_offset = 0.5 * math.atan(0.01 * (BridgeEvolution.budget - cost)) / math.pi
-    if bridge.isSemiValid():
+    if bridge_local.isSemiValid():
         return 1 - math.sqrt(max_strain) + cost_offset
     return 0.5 + cost_offset
 
@@ -285,7 +290,6 @@ def alter_bridge_j(commands: list, my_bridge: Bridge):
         nnf.addConnection(my_bridge, c[0], c[1], c[2])
     for c in rj:
         nnf.removeJoint(my_bridge, c[0], c[1], c[2])
-
     [_, strain_2, _] = sim.simulate(my_bridge)
     s = max(max(s, default=0.0) for s in strain_2)
     cost = sum(con.cost for con in my_bridge.connections)

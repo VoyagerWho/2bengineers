@@ -19,6 +19,7 @@ rawMaterialList = [
     RawMaterial(name="Iron", density=7870, youngModule=2.11e11, yieldStrength=1.0e8, cost=0.12),
     RawMaterial(name="Wood", density=600, youngModule=1.0e10, yieldStrength=4.0e7, cost=0.18),
     RawMaterial(name="Nylon", density=1150, youngModule=2.93e9, yieldStrength=9.0e8, cost=1.00),
+    RawMaterial(name="NumericResistance", density=0.00001, youngModule=1, yieldStrength=1e100, cost=0.0)
 ]
 
 rawMaterialDictionary = {material.name: material for material in rawMaterialList}
@@ -118,6 +119,8 @@ materialList = [
                                                   line=True),
     rawMaterialDictionary["Nylon"].createMaterial(subname="Nylon line 1000", maxLength=150.0, gauge=lineGauge(0.1000),
                                                   line=True),
+    rawMaterialDictionary["NumericResistance"].createMaterial(subname=None, maxLength=1e100, gauge=lineGauge(0.1),
+                                                              line=False)
 ]
 
 materialDictionary = {material.name: material for material in materialList}

@@ -115,7 +115,7 @@ def changeConnectionMaterial(bridge: Bridge, indexOfElement: int, val: float):
     # to do checks and alteration of connection
     # print("cc: ", indexOfElement, len(bridge.connections))
     con = bridge.connections[indexOfElement]
-    material = bridge.materials[int(len(bridge.materials) * val)]
+    material = bridge.materials[int((len(bridge.materials)-1) * val)]
     if con.length <= material.maxLen:
         bridge.connections[indexOfElement] = Connection.makeCFM(con.jointA, con.jointB, material)
         return True
