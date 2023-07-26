@@ -1,9 +1,67 @@
 """
-This file contains definition of neural networks used in ai
-Two main networks:
-    one to work on joints
-    second to work on connection
+New AI module where connection is merged with joint
+Structure:
+    Input:  [
+        Element type {Joint: -1.0, Beam: 1.0}
+        Movement {
+            Joint {
+                stationary: 0.0,
+                movable: 1.0
+            },
+            Beam {
+                partly stationary: -1.0,
+                stationary: 0.0,
+                movable: 1.0
+            }
+        },
+        Min stress {
+            Joint: Min stress of the all connected beams (% of maximum stress for beam),
+            Beam: -1.0
+        },
+        Max stress {
+            Joint: Max stress of the all connected beams (% of maximum stress for beam),
+            Beam: -1.0
+        },
+        Stress {
+            Joint: Avg stress of the all connected beams (% of maximum stress for beam),
+            Beam: Beam stress (% of maximum stress for beam)
+        },
+        Complexity {
+            Joint: Number of the connected beams (scaled to structure complexity),
+            Beam: 0.0
+        },
+        Damage {
+            Joint: Ratio of broken connected beams to number of connected beams,
+            Beam: 1.0 if stress >= 1.0 else 0.0 (whether the beam broke)
+        },
+    ]
+
+    Examples {
+        Joint: [-1.0, 1.0, 0.01, 1.1, 0.5, 0.25, 0.20]
+        Beam: [1.0, -1.0, -1.0, -1.0, 0.5, 0.25, 0.0]
+        }
+
+    Output: [
+        Whether to use moveJoint() <0.0, 1.0>,
+            Value for first argument <-1.0, 1.0>,
+            Value for second argument <-1.0, 1.0>,
+        Whether to use addJoint() <0.0, 1.0>,
+            Value for first argument <-1.0, 1.0>,
+            Value for second argument <-1.0, 1.0>,
+        Whether to use addConnection() <0.0, 1.0>,
+            Value for first argument <-1.0, 1.0>,
+            Value for second argument <-1.0, 1.0>,
+        Whether to use removeJoint() <0.0, 1.0>,
+        Whether to use removeConnection() <0.0, 1.0>,
+    ]
+
+    Example: [0.95, 0.65, 0.5, 0.01, 0.2, -0.7, 0.8, 0.3, -0.3, 0.0, 0.1]
+        -> means:
+            call: moveJoint(...,...,0.65,0.5,...)
+            call: addConnection(...,...,0.3,-0.3,...)
+
 """
+
 from __future__ import print_function
 import os
 import math
@@ -14,45 +72,6 @@ from tbutils.bridgeparts import Bridge
 import tbneuralnetwork.nueralnetworkfunctions as nnf
 import pickle
 
-"""
-NN performing modifications on bridge joints
-Structure:
-    Input:  [Joint type {stationary: 0.0, movable: 1.0},
-            Min stress of the all connected beams (scaled in range of values),
-            Max stress of the all connected beams (scaled in range of values),
-            Avg stress of the all connected beams (scaled in range of values),
-            Number of the connected beams,]
-        Example: [1.0, 0.1, 0.9, 0.8, 2]
-    Output: [Whether to use moveJoint() <0.0, 1.0>,
-            Whether to use removeJoint() <0.0, 1.0>,
-            Whether to use addJoint() <0.0, 1.0>,
-            Whether to use addConnection() <0.0, 1.0>,
-            Value for first argument <0.0, 1.0>,
-            Value for second argument <0.0, 1.0>,]
-        Example: [0.95, 0.01, 0.2, 0.8, 0.65, 0.5]
-            -> means:
-                call: moveJoint(...,...,0.65,0.5,...)
-                call: addConnection(...,...,0.65,0.5,...)
-"""
-
-"""
-NN performing modifications on bridge connection
-Structure:
-    Input:  [Connection material (scaled in range of values),
-            Min stress of the connection (scaled in range of values),
-            Max stress of the connection (scaled in range of values),
-            Avg stress of the connection (scaled in range of values),
-            Time before breaking (scaled by time of whole simulation),]
-        Example: [0.0, 0.1, 1.0, 0.8, 1.0]
-            -> means:
-                part of the road that collapsed ending simulation
-    Output: [Whether to use changeConnectionMaterial() <0.0, 1.0>,
-            Whether to use removeConnection() <0.0, 1.0>,
-            Value for argument <0.0, 1.0>,]
-        Example: [0.95, 0.01, 0.65]
-            -> means:
-                call: changeConnectionMaterial(...,...,0.65)
-"""
 inputs_j = []
 outputs_j = []
 
@@ -78,24 +97,14 @@ class BridgeEvolution:
         Initialization of new set of neural network pair
         :param path_to_catalog: location of catalog with configuration files relative to __main__
         """
-        config_path_joint = os.path.join(path_to_catalog, 'config-feedforward-joint')
-        config_path_connection = os.path.join(path_to_catalog, 'config-feedforward-connection')
-        self.config_j = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
-                                    neat.DefaultSpeciesSet, neat.DefaultStagnation,
-                                    config_path_joint)
-
-        self.config_c = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
-                                    neat.DefaultSpeciesSet, neat.DefaultStagnation,
-                                    config_path_connection)
+        config_path = os.path.join(path_to_catalog, 'config-feedforward-v2')
+        self.config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction, neat.DefaultSpeciesSet,
+                                  neat.DefaultStagnation, config_path)
 
         # Create the population, which is the top-level object for a NEAT run.
-        self.p_j = neat.Population(self.config_j)
-        self.p_c = neat.Population(self.config_c)
+        self.p = neat.Population(self.config)
+        self.winner = None
 
-        self.winner_j = None
-        self.winner_c = None
-
-        #
         self.simulation_time = 0
         self.strain = []
         self.break_moments = []
@@ -104,11 +113,8 @@ class BridgeEvolution:
         """
         Helper function that turns on evolution progress displays on stdout
         """
-        self.p_j.add_reporter(neat.StdOutReporter(True))
-        self.p_j.add_reporter(neat.StatisticsReporter())
-
-        self.p_c.add_reporter(neat.StdOutReporter(True))
-        self.p_c.add_reporter(neat.StatisticsReporter())
+        self.p.add_reporter(neat.StdOutReporter(True))
+        self.p.add_reporter(neat.StatisticsReporter())
 
     def train(self, no_generations: int):
         """
@@ -126,50 +132,36 @@ class BridgeEvolution:
             create_inputs()
             BridgeEvolution.budget = 0.9 * sum(con.cost for con in BridgeEvolution.bridge.connections)
             # learning of joint:
-            
+
             # print(inputs_c)
             # print(inputs_j)
             global bridge_copy
             bridge_copy = BridgeEvolution.bridge.copy()
-            self.winner_j = self.p_j.run(eval_genome_j, no_generations)
+            self.winner = self.p.run(eval_genome_j, no_generations)
             # with open("winner_j.pkl", "rb") as f:
             #   self.winner_j = pickle.load(f)
             # Display the winning genome.
-            print('\nBest genome:\n{!s}'.format(self.winner_j))
-            winner_net = neat.nn.FeedForwardNetwork.create(self.winner_j, self.config_j)
+            print('\nBest genome:\n{!s}'.format(self.winner))
+            winner_net = neat.nn.FeedForwardNetwork.create(self.winner, self.config)
             output = [winner_net.activate(xi) for xi in inputs_j]
             alter_bridge_j(output, BridgeEvolution.bridge)
             bridge_copy = BridgeEvolution.bridge.copy()
-            BridgeEvolution.bridge.render("Train_joint.png")
+            BridgeEvolution.bridge.render("Train.png")
             inputs_j = [() for _ in BridgeEvolution.bridge.points]
             inputs_c = [() for _ in BridgeEvolution.bridge.connections]
             [BridgeEvolution.simulation_time, BridgeEvolution.strain, BridgeEvolution.break_moments] \
                 = sim.simulate(BridgeEvolution.bridge)
             create_inputs()
-            with open("winner_j.pkl", "wb") as f:
-                pickle.dump(self.winner_j, f)
-
-            self.winner_c = self.p_c.run(eval_genome_c, no_generations)
-            # Display the winning genome.
-            print('\nBest genome:\n{!s}'.format(self.winner_c))
-            winner_net = neat.nn.FeedForwardNetwork.create(self.winner_c, self.config_c)
-            output = [winner_net.activate(xi) for xi in inputs_c]
-            alter_bridge_c(output, BridgeEvolution.bridge)
-            BridgeEvolution.bridge.render("Train_connection.png")
-            with open("winner_c.pkl", "wb") as f:
-                pickle.dump(self.winner_c, f)
+            with open("winner.pkl", "wb") as f:
+                pickle.dump(self.winner, f)
 
     def load(self):
-        with open("winner_j.pkl", "rb") as f:
-            self.winner_j = pickle.load(f)
-        with open("winner_c.pkl", "rb") as f:
-            self.winner_c = pickle.load(f)
+        with open("winner.pkl", "rb") as f:
+            self.winner = pickle.load(f)
 
     def save(self):
-        with open("winner_j.pkl", "wb") as f:
-            pickle.dump(self.winner_j, f)
-        with open("winner_c.pkl", "wb") as f:
-            pickle.dump(self.winner_c, f)
+        with open("winner.pkl", "wb") as f:
+            pickle.dump(self.winner, f)
 
     def upgrade(self, mark: str, no_iterations: int):
         """
@@ -193,7 +185,7 @@ class BridgeEvolution:
             global bridge_copy
             bridge_copy = BridgeEvolution.bridge.copy()
             for i in range(no_iterations):
-                net = neat.nn.FeedForwardNetwork.create(self.winner_j, self.config_j)
+                net = neat.nn.FeedForwardNetwork.create(self.winner, self.config)
                 output = [net.activate(xi) for xi in inputs_j]
                 alter_bridge_j(output, BridgeEvolution.bridge)
                 inputs_j = [() for _ in BridgeEvolution.bridge.points]
@@ -201,18 +193,7 @@ class BridgeEvolution:
                 [BridgeEvolution.simulation_time, BridgeEvolution.strain, BridgeEvolution.break_moments] \
                     = sim.simulate(BridgeEvolution.bridge)
                 create_inputs()
-            BridgeEvolution.bridge.render("Upgrade_joint_" + mark + ".png")
-
-            for i in range(no_iterations):
-                net = neat.nn.FeedForwardNetwork.create(self.winner_j, self.config_j)
-                output = [net.activate(xi) for xi in inputs_j]
-                alter_bridge_j(output, BridgeEvolution.bridge)
-                inputs_j = [() for _ in BridgeEvolution.bridge.points]
-                inputs_c = [() for _ in BridgeEvolution.bridge.connections]
-                [BridgeEvolution.simulation_time, BridgeEvolution.strain, BridgeEvolution.break_moments] \
-                    = sim.simulate(BridgeEvolution.bridge)
-                create_inputs()
-            BridgeEvolution.bridge.render("Upgrade_connection_" + mark + ".png")
+            BridgeEvolution.bridge.render("Upgrade_" + mark + ".png")
 
         BridgeEvolution.upgrade_still_running = False
 
@@ -252,7 +233,7 @@ def create_inputs():
     for i, con in enumerate(BridgeEvolution.bridge.connections):
         idx = BridgeEvolution.bridge.materials.index(con.material) / len(BridgeEvolution.bridge.materials)
         time = -1.0 if BridgeEvolution.break_moments[i] == -1.0 \
-            else BridgeEvolution.break_moments[i] / BridgeEvolution.simulation_time
+            else BridgeEvolution.break_moments[i]
         inputs_c[i] = (idx, min(strain[i] for strain in BridgeEvolution.strain),
                        max(strain[i] for strain in BridgeEvolution.strain),
                        sum(strain[i] for strain in BridgeEvolution.strain) / len(BridgeEvolution.strain),
