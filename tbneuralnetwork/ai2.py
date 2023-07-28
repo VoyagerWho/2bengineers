@@ -28,7 +28,7 @@ Structure:
         },
         Complexity {
             Joint: Number of the connected beams (scaled to structure complexity),
-            Beam: 0.0
+            Beam: Beam length / Maximum length
         },
         Damage {
             Joint: Ratio of broken connected beams to number of connected beams,
@@ -72,11 +72,17 @@ from tbutils.bridgeparts import Bridge
 import tbneuralnetwork.nueralnetworkfunctions as nnf
 import pickle
 
+inputs_nn = []
+outputs_nn = []
+
 inputs_j = []
 outputs_j = []
 
 inputs_c = []
 outputs_c = []
+
+complexity = 4
+
 bridge_copy: Bridge or None = None
 
 
@@ -137,14 +143,14 @@ class BridgeEvolution:
             # print(inputs_j)
             global bridge_copy
             bridge_copy = BridgeEvolution.bridge.copy()
-            self.winner = self.p.run(eval_genome_j, no_generations)
+            self.winner = self.p.run(eval_genome, no_generations)
             # with open("winner_j.pkl", "rb") as f:
             #   self.winner_j = pickle.load(f)
             # Display the winning genome.
             print('\nBest genome:\n{!s}'.format(self.winner))
             winner_net = neat.nn.FeedForwardNetwork.create(self.winner, self.config)
-            output = [winner_net.activate(xi) for xi in inputs_j]
-            alter_bridge_j(output, BridgeEvolution.bridge)
+            output = [winner_net.activate(xi) for xi in inputs_nn]
+            alter_bridge(output, BridgeEvolution.bridge)
             bridge_copy = BridgeEvolution.bridge.copy()
             BridgeEvolution.bridge.render("Train.png")
             inputs_j = [() for _ in BridgeEvolution.bridge.points]
@@ -187,7 +193,7 @@ class BridgeEvolution:
             for i in range(no_iterations):
                 net = neat.nn.FeedForwardNetwork.create(self.winner, self.config)
                 output = [net.activate(xi) for xi in inputs_j]
-                alter_bridge_j(output, BridgeEvolution.bridge)
+                alter_bridge(output, BridgeEvolution.bridge)
                 inputs_j = [() for _ in BridgeEvolution.bridge.points]
                 inputs_c = [() for _ in BridgeEvolution.bridge.connections]
                 [BridgeEvolution.simulation_time, BridgeEvolution.strain, BridgeEvolution.break_moments] \
@@ -208,7 +214,7 @@ def score(bridge_local: Bridge, max_strain: float, cost: float):
     """
     cost_offset = 0.5 * math.atan(0.01 * (BridgeEvolution.budget - cost)) / math.pi
     if bridge_local.isSemiValid():
-        return 1 - math.sqrt(max_strain) + cost_offset
+        return 1 - min(math.sqrt(max_strain), 5.0) + cost_offset
     return 0.5 + cost_offset
 
 
@@ -219,30 +225,37 @@ def create_inputs():
     for i, j in enumerate(BridgeEvolution.bridge.points):
         indexes = [BridgeEvolution.bridge.connections.index(con)
                    for con in BridgeEvolution.bridge.getConnectedToJoint(j)]
-        strain_con = [0 for _ in range(len(indexes) * len(BridgeEvolution.strain))]
-        k = 0
-        for strain in BridgeEvolution.strain:
-            for idx in indexes:
-                strain_con[k] = strain[idx]
-                k += 1
-
-        inputs_j[i] = ((1.0 if j.isStationary else 0.0), min(strain_con),
-                       max(strain_con), sum(strain_con) / len(strain_con),
-                       len(indexes))
+        strain_con = [BridgeEvolution.strain[0][idx] for idx in indexes]
+        broken = list(filter(lambda x: (x >= 1.0), strain_con))
+        j_type = -1.0
+        j_movement = 1.0 if j.isStationary else 0.0
+        j_min = min(strain_con)
+        j_max = max(strain_con)
+        j_stress = sum(strain_con) / len(strain_con)
+        j_complexity = (len(indexes)-complexity)/complexity
+        j_damage = len(broken)/len(indexes)
+        inputs_j[i] = [j_type, j_movement, j_min, j_max, j_stress, j_complexity, j_damage]
 
     for i, con in enumerate(BridgeEvolution.bridge.connections):
-        idx = BridgeEvolution.bridge.materials.index(con.material) / len(BridgeEvolution.bridge.materials)
-        time = -1.0 if BridgeEvolution.break_moments[i] == -1.0 \
-            else BridgeEvolution.break_moments[i]
-        inputs_c[i] = (idx, min(strain[i] for strain in BridgeEvolution.strain),
-                       max(strain[i] for strain in BridgeEvolution.strain),
-                       sum(strain[i] for strain in BridgeEvolution.strain) / len(BridgeEvolution.strain),
-                       time)
+        movement_joint_a = con.jointA.isStationary
+        movement_joint_b = con.jointB.isStationary
+        c_type = 1.0
+        c_movement = -1.0 if movement_joint_a ^ movement_joint_b else (0.0 if movement_joint_a else 1.0)
+        c_min = -1.0
+        c_max = -1.0
+        c_stress = BridgeEvolution.strain[0][i]
+        c_complexity = con.length / con.material.maxLen
+        c_damage = BridgeEvolution.break_moments[i]
+        inputs_c[i] = (c_type, c_movement, c_min, c_max, c_stress, c_complexity, c_damage)
+    global inputs_nn
+    inputs_nn = []
+    inputs_nn.extend(inputs_j)
+    inputs_nn.extend(inputs_c)
 
 
-def alter_bridge_j(commands: list, my_bridge: Bridge):
+def alter_bridge(commands: list, my_bridge: Bridge):
     """
-    Function that performs analysis of network solution for joints
+    Function that performs analysis of network solution
     :param my_bridge: bridge to alter
     :param commands: output of network to incorporate
     :return: statistics of a new bridge
@@ -251,66 +264,36 @@ def alter_bridge_j(commands: list, my_bridge: Bridge):
     rj = []
     aj = []
     ac = []
-    removed = 0
-    for i, args in enumerate(commands):
-        val = (i, args[-2], args[-1],)
-        if args[0] > 0.75:
-            mj.append(val)
-        if args[1] > 0.75:
-            rj.append((val[0] - removed, val[1], val[2]))
-            removed += 1
-        if args[2] > 0.75:
-            aj.append(val)
-        if args[3] > 0.75:
-            ac.append(val)
+    rc = []
+    removed_joints = 0
+    removed_connections = 0
+    for i, (el_type, args) in enumerate(commands):
+        if el_type == -1.0:
+            if args[0] > 0.75:
+                mj.append((i, args[1], args[2]))
+            if args[9] > 0.75:
+                rj.append((i - removed_joints,))
+                removed_joints += 1
+            if args[3] > 0.75:
+                aj.append((i, args[4], args[5]))
+            if args[6] > 0.75:
+                ac.append((i, args[7], args[8]))
+        elif el_type == 1.0:
+            idx = i - len(bridge_copy.points)
+            if args[10] > 0.75:
+                rc.append((idx - removed_connections,))
+                removed_connections += 1
+
     for c in mj:
         nnf.moveJoint(my_bridge, c[0], c[1], c[2])
     for c in aj:
         nnf.addJoint(my_bridge, c[0], c[1], c[2])
     for c in ac:
         nnf.addConnection(my_bridge, c[0], c[1], c[2])
-    for c in rj:
-        nnf.removeJoint(my_bridge, c[0], c[1], c[2])
-    [_, strain_2, _] = sim.simulate(my_bridge)
-    s = max(max(s, default=0.0) for s in strain_2)
-    cost = sum(con.cost for con in my_bridge.connections)
-    return score(my_bridge, s, cost)
-
-
-def eval_genome_j(genomes, config):
-    """
-    Scoring function for ai joint
-    :param genomes: genomes list
-    :param config: genome class configuration data
-    :return: float genome's fitness
-    """
-    for genome_id, genome in genomes:
-        net = neat.nn.FeedForwardNetwork.create(genome, config)
-        output = [net.activate(xi) for xi in inputs_j]
-        genome.fitness = alter_bridge_j(output, bridge_copy.copy())
-
-
-def alter_bridge_c(commands: list, my_bridge: Bridge):
-    """
-    Function that performs analysis of network solution for connections
-    :param my_bridge: bridge to alter
-    :param commands: output of network to incorporate
-    :return: statistics of a new bridge
-    """
-    cm = []
-    rc = []
-    removed = 0
-    for i, args in enumerate(commands):
-        val = (i, args[-1],)
-        if args[0] > 0.75:
-            cm.append(val)
-        if args[1] > 0.75:
-            rc.append((val[0] - removed, val[1]))
-            removed += 1
-    for c in cm:
-        nnf.changeConnectionMaterial(my_bridge, c[0], c[1])
     for c in rc:
-        nnf.removeConnection(my_bridge, c[0], c[1])
+        nnf.removeConnection(my_bridge, c[0])
+    for c in rj:
+        nnf.removeJoint(my_bridge, c[0])
 
     [_, strain_2, _] = sim.simulate(my_bridge)
     s = max(max(s, default=0.0) for s in strain_2)
@@ -318,17 +301,17 @@ def alter_bridge_c(commands: list, my_bridge: Bridge):
     return score(my_bridge, s, cost)
 
 
-def eval_genome_c(genomes, config):
+def eval_genome(genomes, config):
     """
-    Scoring function for ai connection
+    Scoring function for ai
     :param genomes: genomes list
     :param config: genome class configuration data
     :return: float genome's fitness
     """
     for genome_id, genome in genomes:
         net = neat.nn.FeedForwardNetwork.create(genome, config)
-        output = [net.activate(xi) for xi in inputs_c]
-        genome.fitness = alter_bridge_c(output, bridge_copy.copy())
+        output = [(xi[0], net.activate(xi)) for xi in inputs_nn]
+        genome.fitness = alter_bridge(output, bridge_copy.copy())
 
 
 if __name__ == '__main__':
