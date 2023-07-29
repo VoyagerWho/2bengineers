@@ -149,17 +149,14 @@ class BridgeEvolution:
             # Display the winning genome.
             print('\nBest genome:\n{!s}'.format(self.winner))
             winner_net = neat.nn.FeedForwardNetwork.create(self.winner, self.config)
-            output = [winner_net.activate(xi) for xi in inputs_nn]
-            alter_bridge(output, BridgeEvolution.bridge)
+            output = [(xi[0], winner_net.activate(xi)) for xi in inputs_nn]
+            alter_bridge(output, BridgeEvolution.bridge, True)
             bridge_copy = BridgeEvolution.bridge.copy()
             BridgeEvolution.bridge.render("Train.png")
-            inputs_j = [() for _ in BridgeEvolution.bridge.points]
-            inputs_c = [() for _ in BridgeEvolution.bridge.connections]
-            [BridgeEvolution.simulation_time, BridgeEvolution.strain, BridgeEvolution.break_moments] \
-                = sim.simulate(BridgeEvolution.bridge)
-            create_inputs()
             with open("winner.pkl", "wb") as f:
                 pickle.dump(self.winner, f)
+            with open("winnerBridge.pkl", "wb") as f:
+                pickle.dump(BridgeEvolution.bridge, f)
 
     def load(self):
         with open("winner.pkl", "rb") as f:
@@ -192,7 +189,7 @@ class BridgeEvolution:
             bridge_copy = BridgeEvolution.bridge.copy()
             for i in range(no_iterations):
                 net = neat.nn.FeedForwardNetwork.create(self.winner, self.config)
-                output = [net.activate(xi) for xi in inputs_j]
+                output = [(xi[0], net.activate(xi)) for xi in inputs_j]
                 alter_bridge(output, BridgeEvolution.bridge)
                 inputs_j = [() for _ in BridgeEvolution.bridge.points]
                 inputs_c = [() for _ in BridgeEvolution.bridge.connections]
@@ -253,7 +250,7 @@ def create_inputs():
     inputs_nn.extend(inputs_c)
 
 
-def alter_bridge(commands: list, my_bridge: Bridge):
+def alter_bridge(commands: list, my_bridge: Bridge, verbose: bool=False):
     """
     Function that performs analysis of network solution
     :param my_bridge: bridge to alter
@@ -295,7 +292,9 @@ def alter_bridge(commands: list, my_bridge: Bridge):
     for c in rj:
         nnf.removeJoint(my_bridge, c[0])
 
-    [_, strain_2, _] = sim.simulate(my_bridge)
+    [broke, strain_2, _] = sim.simulate(my_bridge)
+    if verbose:
+        print("Bridge collapsed" if broke == 1 else "Bridge survived")
     s = max(max(s, default=0.0) for s in strain_2)
     cost = sum(con.cost for con in my_bridge.connections)
     return score(my_bridge, s, cost)

@@ -301,10 +301,10 @@ class Bridge:
         k: float = 1.0
 
         if size is not None:
-            maxX: float = max([p.position.x for p in self.points if p.isStationary], default=0.0)
-            maxY: float = max([p.position.y for p in self.points if p.isStationary], default=0.0)
-            minX: float = min([p.position.x for p in self.points if p.isStationary], default=0.0)
-            minY: float = min([p.position.y for p in self.points if p.isStationary], default=0.0)
+            maxX: float = max([p.position.x for p in self.points], default=0.0)
+            maxY: float = max([p.position.y for p in self.points], default=0.0)
+            minX: float = min([p.position.x for p in self.points], default=0.0)
+            minY: float = min([p.position.y for p in self.points], default=0.0)
 
             k = min(size[0] / float(maxX - minX + epsilon), size[1] / float(maxY - minY + epsilon)) / bounds
             rx = -float(maxX + minX) / 2 + size[0] / k / 2
@@ -477,7 +477,7 @@ class Bridge:
     def isSemiValid(self):
         """
         Function that checks if there is connection between first two stationary points
-        And it also checks additiona strains on roads
+        And it also checks additional strains on roads
         :return: bool
         """
         
@@ -499,10 +499,9 @@ class Bridge:
             j.connections = []
             j.wasHere = False
         
-        for c in self.connections:  
-            if c.material == self.materials[0]:
-                c.jointA.connections.append(c)
-                c.jointB.connections.append(c)
+        for c in self.connections:
+            c.jointA.connections.append(c)
+            c.jointB.connections.append(c)
             
         def doit(joint, another):
             if joint.wasHere:

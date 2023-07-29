@@ -12,34 +12,22 @@ def simulate(bridge_original: Bridge, gravity: m2.Vector2 = m2.Vector2(0, -9.81)
     bridge = bridge_original.copy()
     # insertion of numerical resistance connection
     numerical_resistance = mat_list.materialList[-1]
+    joint_a = Joint(m2.Vector2(-1000.0, -999.0), True)
+    joint_b = Joint(m2.Vector2(999.0, 1000.0), True)
+    bridge.points.append(joint_a)
+    bridge.points.append(joint_b)
 
-    joint_a = bridge.points[0]
-    joint_b = bridge.points[1]
-    connections_of_a = bridge.getConnectedToJoint(joint_a)
-    connections_of_b = bridge.getConnectedToJoint(joint_b)
-
-    def add_connection(stationary: Joint, tested: Joint, connected: bool):
-        if (not connected) and (len(bridge.getConnectedToJoint(p)) > 0) and (not tested.isStationary):
+    def add_connection(stationary: Joint, tested: Joint):
+        if (len(bridge.getConnectedToJoint(p)) > 0) and (not tested.isStationary):
             bridge.connections.append(Connection.makeCFM(stationary, tested, numerical_resistance))
             bridge.connections[-1].update()
             return 1
         return 0
-        
-    added_connections = 0
-    for p in bridge.points[2:]:
-        # numerical resistance to A
-        connected_to_a = False
-        for c in connections_of_a:
-            if (p == c.jointA) or (p == c.jointB):
-                connected_to_a = True
-        added_connections += add_connection(joint_a, p, connected_to_a)
 
-        # numerical resistance to B
-        connected_to_b = False
-        for c in connections_of_b:
-            if (p == c.jointA) or (p == c.jointB):
-                connected_to_b = True
-        added_connections += add_connection(joint_b, p, connected_to_b)
+    added_connections = 0
+    for p in bridge.points[:-2]:
+        added_connections += add_connection(joint_a, p)
+        added_connections += add_connection(joint_b, p)
 
     bridge_points: np.ndarray = np.array([[p.position.x, p.position.y] for p in bridge.points])
     n: int = len(bridge_points)
@@ -115,9 +103,10 @@ def simulate(bridge_original: Bridge, gravity: m2.Vector2 = m2.Vector2(0, -9.81)
     except np.linalg.LinAlgError as e:
         print([k[i, i] for i in range(2*n)])
         np.set_printoptions(precision=0, suppress=True)
-        print(k)
-        print(forces)
-        bridge.render("Error shape.png")
+        import pickle
+        with open("ErrorBridge.pkl", "wb") as f:
+            pickle.dump(bridge_original, f)
+        bridge_original.render("Error shape.png")
         raise e
     # print('\n\nd:\n', d)
 
