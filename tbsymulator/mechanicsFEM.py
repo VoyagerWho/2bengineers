@@ -18,7 +18,7 @@ def simulate(bridge_original: Bridge, gravity: m2.Vector2 = m2.Vector2(0, -9.81)
     bridge.points.append(joint_b)
 
     def add_connection(stationary: Joint, tested: Joint):
-        if (len(bridge.getConnectedToJoint(p)) > 0) and (not tested.isStationary):
+        if (len(bridge.getConnectedToJoint(tested)) > 0) and (not tested.isStationary):
             bridge.connections.append(Connection.makeCFM(stationary, tested, numerical_resistance))
             bridge.connections[-1].update()
             return 1
@@ -50,7 +50,7 @@ def simulate(bridge_original: Bridge, gravity: m2.Vector2 = m2.Vector2(0, -9.81)
     bc = np.array([[2 * i, 2 * i + 1] for i, p in enumerate(bridge.points) if p.isStationary]).flatten()
     # print(bc)
 
-    lengths = [c.length for c in bridge.connections]
+    lengths = [c.length if c.length > 0.0 else 1e-7 for c in bridge.connections]
     cs_mat: np.ndarray = np.zeros([m, 2])
     forces: np.ndarray = np.zeros(2 * n)
 
@@ -131,13 +131,13 @@ def simulate(bridge_original: Bridge, gravity: m2.Vector2 = m2.Vector2(0, -9.81)
                                   else (rate - 1) / (c.maxStretch - 1))
 
     if added_connections > 0:
-        return 0.01 if max(strains_percentage[:-added_connections], default=0.0) < 1 else 1, \
-           [strains_percentage[:-added_connections]], \
-           [0.1 if p < 1.0 else 1 for p in strains_percentage[:-added_connections]]
+        return 0 if max(strains_percentage[:-added_connections], default=0.0) < 1 else 1, \
+           strains_percentage[:-added_connections], \
+           [0 if p < 1.0 else 1 for p in strains_percentage[:-added_connections]]
     else:
-        return 0.01 if max(strains_percentage, default=0.0) < 1 else 1, \
-               [strains_percentage], \
-               [0.1 if p < 1.0 else 1 for p in strains_percentage]
+        return 0 if max(strains_percentage, default=0.0) < 1 else 1, \
+               strains_percentage, \
+               [0 if p < 1.0 else 1 for p in strains_percentage]
 
 
 def ek_mat(cs: np.ndarray):
@@ -149,7 +149,7 @@ def ek_mat(cs: np.ndarray):
 if __name__ == '__main__':
     right = 300.0
     materials = [mat_list.materialList[0],
-                 mat_list.materialList[3],
+                 mat_list.materialList[5],
                  mat_list.materialList[7],
                  mat_list.materialList[19],
                  mat_list.materialList[-1],
