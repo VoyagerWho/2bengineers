@@ -107,7 +107,7 @@ def simulate(bridge_original: Bridge, gravity: m2.Vector2 = m2.Vector2(0, -9.81)
         with open("ErrorBridge.pkl", "wb") as f:
             pickle.dump(bridge_original, f)
         bridge_original.render("Error shape.png")
-        raise e
+        return 1, [2 for _ in bridge_original.connections], [1 for _ in bridge_original.connections]
     # print('\n\nd:\n', d)
 
     strains = np.zeros(m)

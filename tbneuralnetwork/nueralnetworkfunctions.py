@@ -4,6 +4,7 @@ Module defining helper functions for the AI
 
 import math
 from tbutils.bridgeparts import *
+from tbutils.materiallist import materialList
 
 
 def moveJoint(bridge: Bridge, indexOfElement: int, valx: float, valy: float):
@@ -233,3 +234,28 @@ def alter_bridge(commands: list, my_bridge: Bridge):
         removeJoint(my_bridge, c[0])
 
     return my_bridge
+
+
+if __name__ == "__main__":
+    materials = [materialList[3], materialList[3], ]
+    joints = [Joint(m2.Vector2(0.0, 0.0), True), Joint(m2.Vector2(100.0, 0.0), True),
+              Joint(m2.Vector2(50.0, 10.0))]
+    con = [Connection.makeCFM(joints[0], joints[2], materials[0]),
+           Connection.makeCFM(joints[1], joints[2], materials[0]),
+           ]
+    test_bridge = Bridge()
+    test_bridge.points = joints
+    test_bridge.connections = con
+    test_bridge.materials = materials
+    test_bridge.updateAll()
+    test_bridge.render("Test.png")
+    print(test_bridge.points[2])
+    moveJoint(test_bridge, 2, 1, 1)
+    addJoint(test_bridge, 2, 0, 0)
+    addConnection(test_bridge, 0, 1, 0.4)
+    removeJoint(test_bridge, 2)
+    removeConnection(test_bridge, 0)
+    test_bridge.render("Modified.png")
+    print(test_bridge.points[2])
+
+

@@ -74,21 +74,22 @@ from tbneuralnetwork.nueralnetworkfunctions import score, alter_bridge, create_i
 import tbneuralnetwork.traindata as td
 import pickle
 
+FEED_FORWARD = "-feedforward-v2"
+RECURRENT = "-recurrent"
+CURRENT = RECURRENT
 
 class BridgeEvolution:
     """
     Main class for evolving the bridge structure
     Requires a bridge to unlock train method for objects
     """
-    network_type: str = ''
 
-    def __init__(self, path_to_catalog: str, network_type: str = ''):
+    def __init__(self, path_to_catalog: str):
         """
         Initialization of new set of neural network pair
         :param path_to_catalog: location of catalog with configuration files relative to __main__
         """
-        self.network_type = network_type
-        config_path = os.path.join(path_to_catalog, 'config-feedforward-v2' + self.network_type)
+        config_path = os.path.join(path_to_catalog, 'config' + CURRENT)
         self.config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction, neat.DefaultSpeciesSet,
                                   neat.DefaultStagnation, config_path)
 
@@ -114,20 +115,14 @@ class BridgeEvolution:
 
         print('\nBest genome:\n{!s}'.format(self.winner))
 
-        # |____________________
-        # |  Add RNN !!!!
-        # |____________________
-        winner_net = neat.nn.FeedForwardNetwork.create(self.winner, self.config)
+        winner_net = create_network(CURRENT, self.winner, self.config)
 
         for i, (bridge, steps, complexity) in enumerate(td.BRIDGES):
             (_, strains, break_moments) = td.BRIDGES_RESULTS[i]
             bridge_copy = bridge.copy()
             for j in range(steps):
                 inputs_nn = create_inputs(bridge_copy, break_moments, strains, complexity)
-                # |____________________
-                # |  Add RNN !!!!
-                # |____________________
-                output = [(xi[0], winner_net.activate(xi)) for xi in inputs_nn]
+                output = activate(winner_net, CURRENT, inputs_nn)
                 bridge_copy = alter_bridge(output, bridge_copy)
                 (_, strains, break_moments) = sim.simulate(bridge_copy)
                 bridge_copy.render(f"Train{i}_step{j}.png")
@@ -181,6 +176,35 @@ class BridgeEvolution:
         BridgeEvolution.upgrade_still_running = False
 
 
+def activate_feed_forward(network: neat.nn.FeedForwardNetwork, inputs):
+    return [(xi[0], network.activate(xi)) for xi in inputs]
+
+
+def activate_recurrent(network: neat.nn.RecurrentNetwork, inputs):
+    network.reset()
+    for xi in inputs:
+        network.activate(xi)
+    return [(xi[0], network.activate(xi)) for xi in inputs]
+
+
+def activate(network, network_type, inputs):
+    if network_type == FEED_FORWARD:
+        return activate_feed_forward(network, inputs)
+    elif network_type == RECURRENT:
+        return activate_recurrent(network, inputs)
+    else:
+        raise NameError("Unknown network type")
+
+
+def create_network(network_type, genome, config):
+    if network_type == FEED_FORWARD:
+        return neat.nn.FeedForwardNetwork.create(genome, config)
+    elif network_type == RECURRENT:
+        return neat.nn.RecurrentNetwork.create(genome, config)
+    else:
+        raise NameError("Unknown network type")
+
+
 def eval_genome(genome, config):
     """
     Scoring function for ai
@@ -188,10 +212,7 @@ def eval_genome(genome, config):
     :param config: genome class configuration data
     :return: float genome's fitness
     """
-    # |____________________
-    # |  Add RNN !!!!
-    # |____________________
-    net = neat.nn.FeedForwardNetwork.create(genome, config)
+    net = create_network(CURRENT, genome, config)
     scores = 0.0
     runs = 0
     for i, (bridge, steps, complexity) in enumerate(td.BRIDGES):
@@ -199,11 +220,7 @@ def eval_genome(genome, config):
         bridge_copy = bridge.copy()
         for j in range(steps):
             inputs_nn = create_inputs(bridge_copy, break_moments, strains, complexity)
-            # |____________________
-            # |  Add RNN !!!!
-            # |____________________
-
-            output = [(xi[0], net.activate(xi)) for xi in inputs_nn]
+            output = activate(net, CURRENT, inputs_nn)
             bridge_copy = alter_bridge(output, bridge_copy)
             (_, strains, break_moments) = sim.simulate(bridge_copy)
             scores += score(bridge_copy, strains, td.BUDGETS[i])
@@ -218,4 +235,4 @@ if __name__ == '__main__':
     local_dir = os.path.dirname(__file__)
     chamber = BridgeEvolution(local_dir)
     chamber.set_reporter()
-    chamber.train(10)
+    chamber.train(100)
