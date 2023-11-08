@@ -12,8 +12,8 @@ def simulate(bridge_original: Bridge, gravity: m2.Vector2 = m2.Vector2(0, -9.81)
     bridge = bridge_original.copy()
     # insertion of numerical resistance connection
     numerical_resistance = mat_list.materialList[-1]
-    joint_a = Joint(m2.Vector2(-1000.0, -999.0), True)
-    joint_b = Joint(m2.Vector2(999.0, 1000.0), True)
+    joint_a = Joint(m2.Vector2(-12340.0, -9990.0), True)
+    joint_b = Joint(m2.Vector2(9990.0, 10000.0), True)
     bridge.points.append(joint_a)
     bridge.points.append(joint_b)
 
@@ -100,9 +100,8 @@ def simulate(bridge_original: Bridge, gravity: m2.Vector2 = m2.Vector2(0, -9.81)
         # lu, piv = la.lu_factor(k)
         # d = la.lu_solve((lu, piv), forces)
         d = np_lin.solve(k, forces)
-    except np.linalg.LinAlgError as e:
+    except np.linalg.LinAlgError:
         print([k[i, i] for i in range(2*n)])
-        np.set_printoptions(precision=0, suppress=True)
         import pickle
         with open("ErrorBridge.pkl", "wb") as f:
             pickle.dump(bridge_original, f)
@@ -147,16 +146,16 @@ def ek_mat(cs: np.ndarray):
 
 
 if __name__ == '__main__':
-    right = 300.0
-    materials = [mat_list.materialList[0],
-                 mat_list.materialList[5],
-                 mat_list.materialList[7],
-                 mat_list.materialList[19],
-                 mat_list.materialList[-1],
-                 ]
-    stat = [m2.Vector2(100.0, 250.0), m2.Vector2(right, 250.0), ]
-    test_bridge = Builder.buildInitial(materials, m2.Vector2(100.0, 300.0),
-                                       m2.Vector2(right, 300.0), 1, stat)
+    # right = 300.0
+    # materials = [mat_list.materialList[0],
+    #              mat_list.materialList[5],
+    #              mat_list.materialList[7],
+    #              mat_list.materialList[19],
+    #              mat_list.materialList[-1],
+    #              ]
+    # stat = [m2.Vector2(100.0, 250.0), m2.Vector2(right, 250.0), ]
+    # test_bridge = Builder.buildInitial(materials, m2.Vector2(100.0, 300.0),
+    #                                    m2.Vector2(right, 300.0), 1, stat)
     # joints = [Joint(m2.Vector2(0.0, 0.0), True), Joint(m2.Vector2(200.0, 200.0), True),
     #           Joint(m2.Vector2(50.0, 100.0), True), Joint(m2.Vector2(50.0, 10.0))]
     # con = [Connection.makeCFM(joints[2], joints[3], materials[0]),
@@ -166,6 +165,11 @@ if __name__ == '__main__':
     # test_bridge.connections = con
     # test_bridge.materials = materials
     # test_bridge.render("Test.png")
+
+    import pickle
+
+    with open("ErrorBridge.pkl", "rb") as f:
+        test_bridge = pickle.load(f)
 
     (rt, rs, rb) = simulate(test_bridge)
     print(rt, rs, rb, sep='\n')
