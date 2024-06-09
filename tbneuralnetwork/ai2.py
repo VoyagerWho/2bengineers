@@ -76,7 +76,7 @@ import pickle
 
 FEED_FORWARD = "-feedforward-v2"
 RECURRENT = "-recurrent"
-CURRENT = RECURRENT
+CURRENT = FEED_FORWARD
 
 class BridgeEvolution:
     """
@@ -140,40 +140,31 @@ class BridgeEvolution:
         with open("winner.pkl", "wb") as f:
             pickle.dump(self.winner, f)
 
-    def upgrade(self, mark: str, no_iterations: int):
+    def upgrade(self, bridge: Bridge, mark: str, no_iterations: int):
         """
         Method performing evaluation of the bridge by both networks
+        :param bridge: bridge to upgrade
         :param mark: signature of the result files
         :param no_iterations: number of updates per network
         """
-        pass
-        BridgeEvolution.upgrade_still_running = True
-
-        if BridgeEvolution.bridge is not None:
-            global inputs_j
-            global inputs_c
-            inputs_j = [() for _ in BridgeEvolution.bridge.points]
-            inputs_c = [() for _ in BridgeEvolution.bridge.connections]
-            [BridgeEvolution.simulation_time, BridgeEvolution.strain, BridgeEvolution.break_moments] \
-                = sim.simulate(BridgeEvolution.bridge)
-            create_inputs()
-            BridgeEvolution.budget = 0.9 * sum(con.cost for con in BridgeEvolution.bridge.connections)
-            print(inputs_c)
-            print(inputs_j)
-            global bridge_copy
-            bridge_copy = BridgeEvolution.bridge.copy()
+        if bridge is not None:
+            [_, strain, break_moments] = sim.simulate(bridge)
+            budget = max(0.9 * sum(con.cost for con in bridge.connections), 0.1)
+            score1 = score(bridge, strain, budget)
+            bridge_copy = bridge.copy()
+            winner_net = create_network(CURRENT, self.winner, self.config)
             for i in range(no_iterations):
-                net = neat.nn.FeedForwardNetwork.create(self.winner, self.config)
-                output = [(xi[0], net.activate(xi)) for xi in inputs_j]
-                alter_bridge(output, BridgeEvolution.bridge)
-                inputs_j = [() for _ in BridgeEvolution.bridge.points]
-                inputs_c = [() for _ in BridgeEvolution.bridge.connections]
-                [BridgeEvolution.simulation_time, BridgeEvolution.strain, BridgeEvolution.break_moments] \
-                    = sim.simulate(BridgeEvolution.bridge)
-                create_inputs()
-            BridgeEvolution.bridge.render("Upgrade_" + mark + ".png")
-
-        BridgeEvolution.upgrade_still_running = False
+                print(f"IT {i}")
+                inputs_nn = create_inputs(bridge_copy, break_moments, strain, 4)
+                output = activate(winner_net, CURRENT, inputs_nn)
+                bridge_copy = alter_bridge(output, bridge_copy)
+                (_, strain, break_moments) = sim.simulate(bridge_copy)
+                # print(f"{strain}")
+            score2 = score(bridge_copy, strain, budget)
+            print(f"{score1} -> {score2}")
+            bridge_copy.render("Upgrade_" + mark + ".png")
+            return bridge_copy
+        return None
 
 
 def activate_feed_forward(network: neat.nn.FeedForwardNetwork, inputs):
@@ -223,8 +214,10 @@ def eval_genome(genome, config):
             output = activate(net, CURRENT, inputs_nn)
             bridge_copy = alter_bridge(output, bridge_copy)
             (_, strains, break_moments) = sim.simulate(bridge_copy)
-            scores += score(bridge_copy, strains, td.BUDGETS[i])
-            runs += 1
+
+        runs += 1
+        scores += score(bridge_copy, strains, td.BUDGETS[i])
+
     return scores/runs
 
 
@@ -234,5 +227,29 @@ if __name__ == '__main__':
     # current working directory.
     local_dir = os.path.dirname(__file__)
     chamber = BridgeEvolution(local_dir)
-    chamber.set_reporter()
-    chamber.train(100)
+    # chamber.set_reporter()
+    # chamber.train(1000)
+    from tbutils.builder import Builder
+    import tbutils.materiallist as mat_list
+    import tbutils.math2d as m2
+    from tbutils.bridgeparts import Joint, Connection
+
+    chamber.load()
+    MATERIALS = [mat_list.materialList[3], mat_list.materialList[3], ]
+    bridge = Builder.buildInitial(MATERIALS,
+                                  m2.Vector2(-150.0, -75.0),
+                                  m2.Vector2(150.0, -75.0),
+                                  1,
+                                  [m2.Vector2(0.0, 75.0)])
+    bridge.render("Test.png")
+
+    new_bridge = chamber.upgrade(bridge, "Test", 4)
+
+    joints = [Joint(m2.Vector2(-25.0, 0.0), True), Joint(m2.Vector2(25.0, 0.0), True), ]
+    con = []
+    bridge = Bridge()
+    bridge.points = joints
+    bridge.connections = con
+    bridge.materials = MATERIALS
+    bridge.render("Empty.png")
+    new_bridge = chamber.upgrade(bridge, "Empty", 1)

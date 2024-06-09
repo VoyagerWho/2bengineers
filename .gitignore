@@ -150,3 +150,7 @@ unusedCode.txt
 
 *.png
 *.pkl
+*.csv
+
+logs/
+/drawing.py

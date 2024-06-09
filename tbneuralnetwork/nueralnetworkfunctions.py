@@ -149,10 +149,10 @@ def score(bridge_local: Bridge, strains, budget: float):
     """
     max_strain = max(strains, default=0.0)
     cost = sum(con.cost for con in bridge_local.connections)
-    cost_offset = 0.5 * math.atan(0.01 * (budget - cost)) / math.pi
+    cost_offset = 0.5 * math.atan((budget - cost)/budget) / math.pi
     if bridge_local.isSemiValid():
-        return 1 - min(math.sqrt(max_strain), 5.0) + cost_offset
-    return 0.5 + cost_offset
+        return max(1 - min(max_strain**2, 1.0)/2.0 + cost_offset, 0.0)
+    return max(0.5 + cost_offset, 0.0)
 
 
 def create_inputs(bridge: Bridge, break_moments, strains, complexity):
@@ -173,7 +173,9 @@ def create_inputs(bridge: Bridge, break_moments, strains, complexity):
         j_stress = sum(strain_con) / no_connected if no_connected > 0 else 0.0
         j_complexity = (len(indexes)-complexity)/complexity
         j_damage = len(broken)/no_connected if no_connected > 0 else 0.0
-        inputs_nn[i] = (j_type, j_movement, j_min, j_max, j_stress, j_complexity, j_damage)
+        inputs_nn[i] = (j_type, j_movement, j_min, j_max,
+                        j_stress, j_complexity, j_damage,
+                        j.position.x, j.position.y, 0)
     points = len(bridge.points)
 
     for i, con in enumerate(bridge.connections):
@@ -186,7 +188,12 @@ def create_inputs(bridge: Bridge, break_moments, strains, complexity):
         c_stress = strains[i]
         c_complexity = con.length / con.material.maxLen
         c_damage = break_moments[i]
-        inputs_nn[points+i] = (c_type, c_movement, c_min, c_max, c_stress, c_complexity, c_damage)
+        c_middle = (con.jointB.position + con.jointA.position)/2
+        c_vec = con.jointB.position - con.jointA.position
+        c_angle = math.atan2(c_vec.y, c_vec.x)
+        inputs_nn[points+i] = (c_type, c_movement, c_min, c_max,
+                               c_stress, c_complexity, c_damage,
+                               c_middle.x, c_middle.y, c_angle)
     return inputs_nn
 
 

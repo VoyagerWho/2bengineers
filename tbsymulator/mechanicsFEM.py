@@ -114,7 +114,7 @@ def simulate(bridge_original: Bridge, gravity: m2.Vector2 = m2.Vector2(0, -9.81)
         dl = cs_mat[i, 0] * (d[2 * el[1]] - d[2 * el[0]]) \
              + cs_mat[i, 1] * (d[2 * el[1] + 1] - d[2 * el[0] + 1])
         strains[i] = e[i] * dl / lengths[i]
-    # print('strains:\n', strains)
+    # print('strains:\n', strains[[0, 1, 2, 3, 12, 11, 9, 8, 6, 5, 14, 13, 4, 7, 10]])
 
     moved_points = np.array([[p[0] + d[2 * i], p[1] + d[2 * i + 1]] for i, p in enumerate(bridge_points)])
     moved_lengths = []
@@ -126,8 +126,8 @@ def simulate(bridge_original: Bridge, gravity: m2.Vector2 = m2.Vector2(0, -9.81)
     for i, l in enumerate(lengths):
         rate = moved_lengths[i] / l
         c = bridge.connections[i]
-        strains_percentage.append((1 - rate) / (1 - c.maxCompression) if rate <= 1.0
-                                  else (rate - 1) / (c.maxStretch - 1))
+        strains_percentage.append(min((1 - rate) / (1 - c.maxCompression), 2) if rate <= 1.0
+                                  else min((rate - 1) / (c.maxStretch - 1), 2))
 
     if added_connections > 0:
         return 0 if max(strains_percentage[:-added_connections], default=0.0) < 1 else 1, \
@@ -155,7 +155,13 @@ if __name__ == '__main__':
     #              ]
     # stat = [m2.Vector2(100.0, 250.0), m2.Vector2(right, 250.0), ]
     # test_bridge = Builder.buildInitial(materials, m2.Vector2(100.0, 300.0),
-    #                                    m2.Vector2(right, 300.0), 1, stat)
+    #                                    m2.Vector2(right, 300.0))
+    # for j in test_bridge.points:
+    #     j.position = j.position/10
+    #    print(j)
+
+    # for c in test_bridge.connections:
+    #    print(c.jointA.position, c.jointB.position)
     # joints = [Joint(m2.Vector2(0.0, 0.0), True), Joint(m2.Vector2(200.0, 200.0), True),
     #           Joint(m2.Vector2(50.0, 100.0), True), Joint(m2.Vector2(50.0, 10.0))]
     # con = [Connection.makeCFM(joints[2], joints[3], materials[0]),
@@ -168,8 +174,13 @@ if __name__ == '__main__':
 
     import pickle
 
-    with open("ErrorBridge.pkl", "rb") as f:
+    with open("../tbneuralnetwork/winnerBridge0.pkl", "rb") as f:
         test_bridge = pickle.load(f)
-
+    test_bridge.render("wb0.png")
     (rt, rs, rb) = simulate(test_bridge)
+
     print(rt, rs, rb, sep='\n')
+    for c in test_bridge.connections:
+        print(c)
+    for j in test_bridge.points:
+        print(j)

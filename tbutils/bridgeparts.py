@@ -321,7 +321,7 @@ class Bridge:
 
         return lines, points
 
-    def render(self, fileName: str, width: int = 640, height: int = 480, bounds: float = 1.3, model=None):
+    def render(self, fileName: str, width: int = 640, height: int = 480, bounds: float = 1.05, model=None):
         """
         Renders the bridge to a png file.
         """
@@ -335,14 +335,20 @@ class Bridge:
             model = self.getModelForRender((width, height), bounds)
 
         for line in model[0]:
+            # draw.line([(line[0], height - line[1] - 1), (line[2], height - line[3] - 1)], width=5,
+            #           fill=(int(255 * line[4]) + int(255 - 255 * line[4]) * 256), joint="curve")
             draw.line([(line[0], height - line[1] - 1), (line[2], height - line[3] - 1)], width=5,
-                      fill=(int(255 * line[4]) + int(255 - 255 * line[4]) * 256), joint="curve")
+                      fill=0, joint="curve")
 
         colors = {True: "purple", False: "red"}
 
         for point in model[1]:
-            draw.ellipse((point[0] - 5, height - point[1] - 5 - 1, point[0] + 5, height - point[1] + 5 - 1),
-                         outline=colors[point[2]], width=3, fill=None)
+            if point[2]:
+                draw.rectangle((point[0] - 5, height - point[1] - 5 - 1, point[0] + 5, height - point[1] + 5 - 1),
+                               outline="magenta", width=3, fill="magenta")
+            else:
+                draw.ellipse((point[0] - 5, height - point[1] - 5 - 1, point[0] + 5, height - point[1] + 5 - 1),
+                             outline=colors[point[2]], width=3, fill="red")
 
         image.save(fileName)
 
