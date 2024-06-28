@@ -101,11 +101,11 @@ def simulate(bridge_original: Bridge, gravity: m2.Vector2 = m2.Vector2(0, -9.81)
         # d = la.lu_solve((lu, piv), forces)
         d = np_lin.solve(k, forces)
     except np.linalg.LinAlgError:
-        print([k[i, i] for i in range(2*n)])
-        import pickle
-        with open("ErrorBridge.pkl", "wb") as f:
-            pickle.dump(bridge_original, f)
-        bridge_original.render("Error shape.png")
+        # print([k[i, i] for i in range(2*n)])
+        # import pickle
+        # with open("ErrorBridge.pkl", "wb") as f:
+        #     pickle.dump(bridge_original, f)
+        # bridge_original.render("Error shape.png")
         return 1, [2 for _ in bridge_original.connections], [1 for _ in bridge_original.connections]
     # print('\n\nd:\n', d)
 

@@ -3,9 +3,10 @@ Utility module defining all functional parts of bridge model
 Consists of classes and helper functions
 
 """
-
+from __future__ import annotations
 import tbutils.math2d as m2
 from math import exp
+from typing import List
 
 
 def sqr(x):
@@ -101,13 +102,13 @@ class Connection:
         self.compressionForceRate: float = compressionForceRate
         self.maxStretch: float = maxStretch
         self.stretchForceRate: float = stretchForceRate
-        self.length = 0.0  # placeholder
+        self.length: float = 0.0  # placeholder
+        self.cost: float = 0.0
         self.soften: float = 1.0
-        self.updateLength()
-        self.broken = False
-        self.cost = 0.0
-        self.material = None
-        self.additionalMass = 0.0
+        self.broken: bool = False
+        self.material: Material or None = None
+        self.additionalMass: float = 0.0
+        self.update()
 
     def __str__(self):
         return "Joints: [" + str(self.jointA) + ", " + str(self.jointB) + "]\tMass=" + str(
@@ -132,9 +133,8 @@ class Connection:
         :return: Connection between A and B
         """
         c = Connection(jointA, jointB, 0, material.maxCom, material.comFR, material.maxStr, material.strFR)
-        c.mass = c.length * material.linDen
-        c.addCost(c.length * material.cost)
         c.material = material
+        c.update()
         return c
 
     def getForce(self):  # for jointA / Force jointB = - Force jointA
@@ -200,7 +200,7 @@ class Connection:
                 self.broken = True
         return self.broken
 
-    def copy(self):
+    def copy(self) -> Connection:
         """
         Makes copy of the joint. 
         """
@@ -211,6 +211,7 @@ class Connection:
         c.material = self.material
         c.soften = self.soften
         c.additionalMass = self.additionalMass
+        c.update()
         return c
 
     def breakToTwo(self, where: float = 0.5):
@@ -235,10 +236,10 @@ class Connection:
         """
         Utility method to update length dependant attributes
         """
-
-        self.length = (self.jointA.position - self.jointB.position).length()
-        self.mass = self.length * self.material.linDen
-        self.cost = self.length * self.material.cost
+        if self.material:
+            self.length = (self.jointA.position - self.jointB.position).length()
+            self.mass = self.length * self.material.linDen
+            self.cost = self.length * self.material.cost
 
 
 class Bridge:
@@ -253,12 +254,12 @@ class Bridge:
     """
 
     def __init__(self, roadStrains : float = 0.0):  # road strains in kg per meter
-        self.points = []
-        self.connections = []
-        self.materials = []
-        self.roadStrains = roadStrains
+        self.points: List[Joint] = []
+        self.connections: List[Connection] = []
+        self.materials: List[Material] = []
+        self.roadStrains: float = roadStrains
 
-    def copy(self):
+    def copy(self) -> Bridge:
         """
         Makes depth copy of the bridge.
         """
@@ -480,7 +481,7 @@ class Bridge:
             else:
                 con.additionalMass = 0.0                
 
-    def isSemiValid(self):
+    def isSemiValid(self) -> bool:
         """
         Function that checks if there is connection between first two stationary points
         And it also checks additional strains on roads
@@ -545,8 +546,8 @@ class Material:
         :param costPerUnit: prize of one unit of measurement
         There is description field to be set if needed
         """
-        self.name = name
-        self.maxLen = maxLength
+        self.name: str = name
+        self.maxLen: float = maxLength
         self.linDen: float = linearDensity
         self.maxCom: float = maxCompression
         self.comFR: float = compressionForceRate

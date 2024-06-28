@@ -76,7 +76,7 @@ import pickle
 
 FEED_FORWARD = "-feedforward-v2"
 RECURRENT = "-recurrent"
-CURRENT = FEED_FORWARD
+CURRENT = RECURRENT
 
 class BridgeEvolution:
     """
@@ -125,8 +125,8 @@ class BridgeEvolution:
                 output = activate(winner_net, CURRENT, inputs_nn)
                 bridge_copy = alter_bridge(output, bridge_copy)
                 (_, strains, break_moments) = sim.simulate(bridge_copy)
-                bridge_copy.render(f"Train{i}_step{j}.png")
-            with open(f"winnerBridge{i}.pkl", "wb") as f:
+                bridge_copy.render(f"train_results/Train{i}_step{j}.png")
+            with open(f"train_results/winnerBridge{i}.pkl", "wb") as f:
                 pickle.dump(bridge_copy, f)
 
         with open("winner.pkl", "wb") as f:
@@ -162,7 +162,7 @@ class BridgeEvolution:
                 # print(f"{strain}")
             score2 = score(bridge_copy, strain, budget)
             print(f"{score1} -> {score2}")
-            bridge_copy.render("Upgrade_" + mark + ".png")
+            bridge_copy.render("upgrade_results/Upgrade_" + mark + ".png")
             return bridge_copy
         return None
 
@@ -227,8 +227,8 @@ if __name__ == '__main__':
     # current working directory.
     local_dir = os.path.dirname(__file__)
     chamber = BridgeEvolution(local_dir)
-    # chamber.set_reporter()
-    # chamber.train(1000)
+    chamber.set_reporter()
+    chamber.train(250)
     from tbutils.builder import Builder
     import tbutils.materiallist as mat_list
     import tbutils.math2d as m2
@@ -242,7 +242,6 @@ if __name__ == '__main__':
                                   1,
                                   [m2.Vector2(0.0, 75.0)])
     bridge.render("Test.png")
-
     new_bridge = chamber.upgrade(bridge, "Test", 4)
 
     joints = [Joint(m2.Vector2(-25.0, 0.0), True), Joint(m2.Vector2(25.0, 0.0), True), ]
