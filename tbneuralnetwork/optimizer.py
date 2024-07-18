@@ -1,6 +1,6 @@
 """
-New AI module where connection is merged with joint
-Structure:
+AI module where connection is merged with joint
+Structure of border layers:
     Input:  [
         Element type {Joint: -1.0, Beam: 1.0}
         Movement {
@@ -57,16 +57,18 @@ Structure:
 
     * Note: arguments values are mapped to symmetrical space in helper functions
 
-    Example: [0.95, 0.65, 0.5, 0.01, 0.2, -0.7, 0.8, 0.3, -0.3, 0.0, 0.1]
+    Example: [0.95, 0.65, 0.5, 0.01, 0.2, 0.7, 0.8, 0.3, 0.3, 0.0, 0.1]
         -> means:
             call: moveJoint(...,...,0.65,0.5,...)
-            call: addConnection(...,...,0.3,-0.3,...)
+            call: addConnection(...,...,0.3,0.3,...)
 
 """
 
 from __future__ import print_function
 import multiprocessing
 import os
+from typing import List, Tuple
+
 import neat
 import tbsymulator.mechanicsFEM as sim
 from tbutils.bridgeparts import Bridge
@@ -74,7 +76,7 @@ from tbneuralnetwork.nueralnetworkfunctions import score, alter_bridge, create_i
 import tbneuralnetwork.traindata as td
 import pickle
 
-FEED_FORWARD = "-feedforward-v2"
+FEED_FORWARD = "-feedforward"
 RECURRENT = "-recurrent"
 CURRENT = RECURRENT
 
@@ -134,14 +136,20 @@ class BridgeEvolution:
             pickle.dump(self.winner, f)
 
     def load(self):
+        """
+        Load the network from the file
+        """
         with open("winner.pkl", "rb") as f:
             self.winner = pickle.load(f)
 
     def save(self):
+        """
+        Save the network to the file
+        """
         with open("winner.pkl", "wb") as f:
             pickle.dump(self.winner, f)
 
-    def upgrade(self, bridge: Bridge, mark: str, no_iterations: int):
+    def upgrade(self, bridge: Bridge, mark: str, no_iterations: int) -> Bridge or None:
         """
         Method performing evaluation of the bridge by both networks
         :param bridge: bridge to upgrade
@@ -168,18 +176,39 @@ class BridgeEvolution:
         return None
 
 
-def activate_feed_forward(network: neat.nn.FeedForwardNetwork, inputs):
+def activate_feed_forward(network: neat.nn.FeedForwardNetwork, inputs: List[List[float]]) \
+        -> List[Tuple[float, List[float]]]:
+    """
+    Helper function to do interference on the feed forward network
+    :param network: Network instance
+    :param inputs: Input data
+    :return: Output of the network
+    """
     return [(xi[0], network.activate(xi)) for xi in inputs]
 
 
-def activate_recurrent(network: neat.nn.RecurrentNetwork, inputs):
+def activate_recurrent(network: neat.nn.RecurrentNetwork, inputs: List[List[float]]) -> List[Tuple[float, List[float]]]:
+    """
+    Helper function to do interference on the recurrent network
+    :param network: Network instance
+    :param inputs: Input data
+    :return: Output of the network
+    """
     network.reset()
     for xi in inputs:
         network.activate(xi)
     return [(xi[0], network.activate(xi)) for xi in inputs]
 
 
-def activate(network, network_type, inputs):
+def activate(network: neat.nn.FeedForwardNetwork or neat.nn.RecurrentNetwork, network_type: str,
+             inputs: List[List[float]]) -> List[Tuple[float, List[float]]]:
+    """
+    Helper function to do interference on any network
+    :param network: Network instance
+    :param network_type: Type of the network
+    :param inputs: Input data
+    :return: Output of the network
+    """
     if network_type == FEED_FORWARD:
         return activate_feed_forward(network, inputs)
     elif network_type == RECURRENT:
@@ -188,7 +217,15 @@ def activate(network, network_type, inputs):
         raise NameError("Unknown network type")
 
 
-def create_network(network_type, genome, config):
+def create_network(network_type: str, genome: neat.genome, config: neat.config) -> neat.nn.FeedForwardNetwork \
+                                                                                   or neat.nn.RecurrentNetwork:
+    """
+    Helper function to generate network from genotype
+    :param network_type: Type of the network
+    :param genome: Genome
+    :param config: Configuration
+    :return: Configured network
+    """
     if network_type == FEED_FORWARD:
         return neat.nn.FeedForwardNetwork.create(genome, config)
     elif network_type == RECURRENT:
@@ -197,12 +234,12 @@ def create_network(network_type, genome, config):
         raise NameError("Unknown network type")
 
 
-def eval_genome(genome, config):
+def eval_genome(genome: neat.genome, config: neat.config) -> float:
     """
     Scoring function for ai
     :param genome: genomes list
     :param config: genome class configuration data
-    :return: float genome's fitness
+    :return: genome's fitness
     """
     net = create_network(CURRENT, genome, config)
     scores = 0.0
@@ -237,11 +274,11 @@ if __name__ == '__main__':
 
     chamber.load()
     MATERIALS = [mat_list.materialList[3], mat_list.materialList[3], ]
-    bridge = Builder.buildInitial(MATERIALS,
-                                  m2.Vector2(-150.0, -75.0),
-                                  m2.Vector2(150.0, -75.0),
-                                  1,
-                                  [m2.Vector2(0.0, 75.0)])
+    bridge = Builder.build_initial(MATERIALS,
+                                   m2.Vector2(-150.0, -75.0),
+                                   m2.Vector2(150.0, -75.0),
+                                   1,
+                                   [m2.Vector2(0.0, 75.0)])
     bridge.render("Test.png")
     new_bridge = chamber.upgrade(bridge, "Test", 1)
 

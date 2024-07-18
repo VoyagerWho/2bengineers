@@ -7,7 +7,7 @@ from tbutils.bridgeparts import *
 from tbutils.materiallist import materialList
 
 
-def moveJoint(bridge: Bridge, indexOfElement: int, valx: float, valy: float):
+def moveJoint(bridge: Bridge, indexOfElement: int, valx: float, valy: float) -> bool:
     """
     Helper function for AI to allow to move single Joint within a square area
     :param bridge: bridge object to alter
@@ -16,8 +16,6 @@ def moveJoint(bridge: Bridge, indexOfElement: int, valx: float, valy: float):
     :param valy: ratio of y offset <0, 1>
     :return: True if operation was possible False otherwise
     """
-    # to do checks if possible and move joint and all connected beams
-    # print("mj: ", indexOfElement, len(bridge.points))
     joint = bridge.points[indexOfElement]
     if joint.isStationary:
         return False
@@ -37,16 +35,14 @@ def moveJoint(bridge: Bridge, indexOfElement: int, valx: float, valy: float):
         return False
 
 
-def removeJoint(bridge: Bridge, indexOfElement: int, *extra):
+def removeJoint(bridge: Bridge, indexOfElement: int, *extra) -> bool:
     """
     Helper function for AI to allow to remove single Joint
     :param bridge: bridge object to alter
     :param indexOfElement: index of the joint to remove
-    :param extra: extra parameters to normalize interaction
+    :param extra: extra parameters to normalize interface
     :return: True if operation was possible False otherwise
     """
-    # to do checks and removal of the joint and connection
-    # print("rj: ", indexOfElement, len(bridge.points))
     joint = bridge.points[indexOfElement]
     if joint.isStationary:
         return False
@@ -55,7 +51,7 @@ def removeJoint(bridge: Bridge, indexOfElement: int, *extra):
     return True
 
 
-def addJoint(bridge: Bridge, indexOfElement: int, valx: float, valy: float):
+def addJoint(bridge: Bridge, indexOfElement: int, valx: float, valy: float) -> bool:
     """
     Helper function for AI to allow to add single Joint within a square area of the other one
     and connect it them with default beam
@@ -63,11 +59,8 @@ def addJoint(bridge: Bridge, indexOfElement: int, valx: float, valy: float):
     :param indexOfElement: index of the joint to connect with
     :param valx: ratio of x offset of the new joint <0, 1>
     :param valy: ratio of y offset of the new joint <0, 1>
-    :param radius: maximum offset in booth axes
     :return: True if operation was possible False otherwise
     """
-    # to do checks and adding of the joint
-    # print("aj: ", indexOfElement, len(bridge.points))
     joint = bridge.points[indexOfElement]
     connected = bridge.getConnectedToJoint(joint)
     moveRange = sum(con.material.maxLen for con in connected) / (len(connected) * 2) if len(connected) > 0 else 50.0
@@ -80,7 +73,7 @@ def addJoint(bridge: Bridge, indexOfElement: int, valx: float, valy: float):
     return True
 
 
-def addConnection(bridge: Bridge, indexOfElement: int, valx: float, valy: float):
+def addConnection(bridge: Bridge, indexOfElement: int, valx: float, valy: float) -> bool:
     """
     Helper function for AI to allow to connect Joint with another with default beam within square area of it
     :param bridge: bridge object to alter
@@ -89,8 +82,6 @@ def addConnection(bridge: Bridge, indexOfElement: int, valx: float, valy: float)
     :param valy: ratio of y offset of the second joint <0, 1>
     :return: True if operation was possible False otherwise
     """
-    # to do checks and connection of the joints
-    # print("ac: ", indexOfElement, len(bridge.points))
     joint = bridge.points[indexOfElement]
     newpos = joint.position + m2.Vector2((valx - 0.5), (valy - 0.5)) * bridge.materials[1].maxLen
     dists = [(j, (j.position - newpos).length()) for j in bridge.points if j != joint]
@@ -106,26 +97,7 @@ def addConnection(bridge: Bridge, indexOfElement: int, valx: float, valy: float)
         return False
 
 
-def changeConnectionMaterial(bridge: Bridge, indexOfElement: int, val: float):
-    """
-    Helper function for AI to allow to change single Connection's material
-    :param bridge: bridge object to alter
-    :param indexOfElement: index of the connection
-    :param val: ratio of the offset in materials length
-    :return: True if operation was possible False otherwise
-    """
-    # to do checks and alteration of connection
-    # print("cc: ", indexOfElement, len(bridge.connections))
-    con = bridge.connections[indexOfElement]
-    material = bridge.materials[int((len(bridge.materials)-1) * val)]
-    if con.length <= material.maxLen:
-        bridge.connections[indexOfElement] = Connection.makeCFM(con.jointA, con.jointB, material)
-        return True
-    else:
-        return False
-
-
-def removeConnection(bridge: Bridge, indexOfElement: int, *extra):
+def removeConnection(bridge: Bridge, indexOfElement: int, *extra) -> bool:
     """
     Helper function for AI to allow to remove single Connection
     :param bridge: bridge object to alter
@@ -133,18 +105,16 @@ def removeConnection(bridge: Bridge, indexOfElement: int, *extra):
     :param extra: extra value to unify functions call
     :return: True if operation was possible False otherwise
     """
-    # to do checks and removal of the connection
-    # print("rc: ", indexOfElement, len(bridge.connections))
     bridge.connections.pop(indexOfElement)
     return True
 
 
-def score(bridge_local: Bridge, strains, budget: float):
+def score(bridge_local: Bridge, strains, budget: float) -> float:
     """
     Utility function to calculate resulting score of the simulation for genome fitness value
     :param bridge_local: tested structure
     :param strains: maximum value of strain in simulation
-    :param budget: optimal budget of structure
+    :param budget: assigned budget of structure
     :return: float: score of the model
     """
     max_strain = max(strains, default=0.0)
@@ -155,9 +125,9 @@ def score(bridge_local: Bridge, strains, budget: float):
     return max(0.5 - cost_offset, 0.0)
 
 
-def create_inputs(bridge: Bridge, break_moments, strains, complexity):
+def create_inputs(bridge: Bridge, break_moments, strains, complexity) -> List:
     """
-    Calculation of current statistics of the bridge and preparing inputs for networks to train on
+    Calculation of current statistics of the bridge and preparing inputs for networks
     """
     inputs_nn = [() for _ in range(len(bridge.points) + len(bridge.connections))]
     for i, j in enumerate(bridge.points):
@@ -197,13 +167,12 @@ def create_inputs(bridge: Bridge, break_moments, strains, complexity):
     return inputs_nn
 
 
-def alter_bridge(commands: list, my_bridge: Bridge):
+def alter_bridge(commands: list, my_bridge: Bridge) -> Bridge:
     """
     Function that performs analysis of network solution
-    :param verbose: print info whether bridge collapsed or not
-    :param my_bridge: bridge to alter
     :param commands: output of network to incorporate
-    :return: statistics of a new bridge
+    :param my_bridge: bridge to alter
+    :return: modified bridge
     """
     mj = []
     rj = []

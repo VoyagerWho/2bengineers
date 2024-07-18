@@ -5,20 +5,7 @@ Consists of classes and helper functions
 """
 from __future__ import annotations
 import tbutils.math2d as m2
-from math import exp
-from typing import List
-
-
-def sqr(x):
-    return x * x
-
-
-def inRange(x, lo, hi):
-    return (x >= lo) and (x <= hi)
-
-
-def inStrongRange(x, lo, hi):
-    return (x > lo) and (x < hi)
+from typing import List, Tuple
 
 
 class Joint:
@@ -28,64 +15,18 @@ class Joint:
 
     def __init__(self, position: m2.Vector2, stationary: bool = False):
         self.position: m2.Vector2 = m2.Vector2(position)
-        self.forces: m2.Vector2 = m2.Vector2()
         self.isStationary: bool = stationary
-        self.velocity: m2.Vector2 = m2.Vector2()
-        self.inertia: float = 0
         self.indexOnBridge: int = 0
-
-    def move(self, time: float, expResistance: float):
-        """
-        Simulates one time step with using resistance.
-        :param time: period for simulation
-        :param expResistance: value of exp(resistance)
-        
-        """
-        if (not self.isStationary) and (self.inertia != 0):
-            dv: m2.Vector2 = self.forces * (time / self.inertia)
-            self.position += (self.velocity + dv / 2) * time
-            self.velocity += dv
-            self.velocity *= expResistance  # exp(-time * resistance)
-        return self
-    
-    def prepare(self):
-        """
-        Zeroes variables before any time step.
-        """
-        self.forces.x = 0.0
-        self.forces.y = 0.0
-        self.inertia = 0.0
-
-    def assign(self, j):
-        """
-        Copy all values from j - another instance of Joint.
-        """
-        self.position = j.position.copy()
-        self.forces = j.forces.copy()
-        self.isStationary = j.isStationary
-        self.velocity = j.velocity.copy()
-        self.inertia = j.inertia
 
     def copy(self):
         """
-        Makes copy of the joint.
+        Makes copy of the joint
         """        
-        c = Joint(self.position)
-        c.assign(self)
-        return c
-
-    def calcDelta(self, j):
-        """
-        Calculates error between self and j.
-        """        
-        if not self.isStationary:
-            mf : float = (self.forces.length() + j.forces.length())/2
-            return (self.forces - j.forces).length()/(mf+1.0)
-        return 0.0
+        j = Joint(self.position.copy(), self.isStationary)
+        return j
 
     def __str__(self):
-        return "Position = " + str(self.position) + "\tVelocity = " + str(self.velocity) + "\tForces = " + str(
-            self.forces) + "\tInertia = " + str(self.inertia) + "\tIsStationary = " + str(self.isStationary)
+        return "Position = " + str(self.position) + "\tIsStationary = " + str(self.isStationary)
 
 
 class Connection:
@@ -116,12 +57,6 @@ class Connection:
             self.compressionForceRate) + "\tMaxStretch=" + str(self.maxStretch) + "\tStretchForceRate=" + str(
             self.stretchForceRate) + "\tBroken: " + str(self.broken)
 
-    def updateLength(self):
-        """
-        Calculates length as distance between jointA and jointB
-        """
-        self.length: float = (self.jointA.position - self.jointB.position).length()
-
     @staticmethod
     def makeCFM(jointA: Joint, jointB: Joint, material):
         """
@@ -137,72 +72,9 @@ class Connection:
         c.update()
         return c
 
-    def getForce(self):  # for jointA / Force jointB = - Force jointA
-        """
-        Returns force which is made by the connection.
-        """
-        v: m2.Vector2 = (self.jointA.position - self.jointB.position)
-        currentLength: float = v.length()
-        if currentLength < self.length:
-            return v.normal() * (-self.compressionForceRate * (currentLength - self.length) / self.soften)
-        if currentLength > self.length:
-            return v.normal() * (-self.stretchForceRate * (currentLength - self.length) / self.soften)
-        return m2.Vector2()
-
-    def addForces(self, gravity: m2.Vector2 = m2.Vector2()):
-        """
-        Adds made forces to joints.
-        """
-        if not self.broken:
-            forces: m2.Vector2 = self.getForce()
-            gm: m2.Vector2 = gravity * ((self.mass + self.additionalMass) / 2)
-            self.jointA.forces += gm + forces
-            self.jointB.forces += gm - forces
-
-    def addInertia(self):
-        """
-        Adds intertia forces to joints.
-        """
-        if not self.broken:
-            self.jointA.inertia += (self.mass + self.additionalMass) / 2
-            self.jointB.inertia += (self.mass + self.additionalMass) / 2
-
-    def getStrain(self):  
-        """
-        Returns strain of the connection. It is between 0 and 1.
-        """
-        if self.broken:
-            return 1
-        v: m2.Vector2 = (self.jointA.position - self.jointB.position)
-        currentLength: float = v.length()
-
-        if self.length == 0:
-            return 0.0
-
-        if currentLength > self.length and inStrongRange(self.maxCompression, 0, 1):
-            return min(1.0, abs((currentLength - self.length) / self.length / (self.maxCompression - 1)))
-
-        elif currentLength < self.length and self.maxStretch > 1:
-            return min(1.0, abs((currentLength - self.length) / self.length / (self.maxStretch - 1)))
-
-        return 0
-
-    def checkBreaking(self):
-        """
-        Checks if connection is broken (because it is too long or too short).
-        """
-        if not self.broken:
-            v: m2.Vector2 = (self.jointA.position - self.jointB.position)
-            currentLength: float = v.length()
-            if currentLength < self.length * self.maxCompression:
-                self.broken = True
-            if currentLength > self.length * self.maxStretch:
-                self.broken = True
-        return self.broken
-
     def copy(self) -> Connection:
         """
-        Makes copy of the joint. 
+        Makes copy of the connection
         """
         c = Connection(jointA=self.jointA, jointB=self.jointB, mass=self.mass, maxCompression=self.maxCompression,
                        compressionForceRate=self.compressionForceRate,
@@ -213,24 +85,6 @@ class Connection:
         c.additionalMass = self.additionalMass
         c.update()
         return c
-
-    def breakToTwo(self, where: float = 0.5):
-        j1 = Joint((self.jointA.position * where + self.jointB.position * (1 - where)))
-        j1.velocity = self.jointA.velocity * where + self.jointB.velocity * (1 - where)
-        j2 = j1.copy()
-        c1 = Connection(self.jointA, j1, self.mass * where, self.maxCompression, self.compressionForceRate,
-                        self.maxStretch, self.stretchForceRate)
-        c2 = Connection(j2, self.jointB, self.mass * (1.0 - where), self.maxCompression, self.compressionForceRate,
-                        self.maxStretch, self.stretchForceRate)
-        return j1, j2, c1, c2
-
-    def addCost(self, cost: float):
-        """
-        Method to alter value of cost attribute of the connection
-        :param cost: new cost value
-        """
-
-        self.cost = cost
 
     def update(self):
         """
@@ -245,12 +99,6 @@ class Connection:
 class Bridge:
     """
     Class representing model of the bridge
-
-    Note: A valid material list consist of at least two materials
-       where: 0 - road material
-              1 - main structure material
-            ... - other support materials
-    Road materials at different indexes will not be recognised as valid road material
     """
 
     def __init__(self, roadStrains : float = 0.0):  # road strains in kg per meter
@@ -261,7 +109,7 @@ class Bridge:
 
     def copy(self) -> Bridge:
         """
-        Makes depth copy of the bridge.
+        Makes deep copy of the bridge
         """
         b = Bridge(roadStrains=self.roadStrains)
         b.materials = self.materials.copy()
@@ -278,12 +126,12 @@ class Bridge:
 
         return b
 
-    def getModelForRender(self, size: (int, int) = None,
-                          bounds: float = 1.3):
+    def getModelForRender(self, size: (int, int) = None, bounds: float = 1.3) \
+            -> Tuple[List[Tuple[float, float, float, float, float] or None], Tuple[float, float, bool] or None]:
         """
-        Returns vector model of the bridge.
-        :param size:
-        :param bounds:
+        Returns vector model of the bridge
+        :param size: Image size
+        :param bounds: Extra empty space around model
         :return: tuple of two lists of tuples: with lines: (x1, y1, x2, y2, strain), with joints: (x, y, isStationary)
         """
         lines = []
@@ -315,16 +163,22 @@ class Bridge:
             if not connection.broken:
                 lines.append(((connection.jointA.position.x + rx) * k, (connection.jointA.position.y + ry) * k,
                               (connection.jointB.position.x + rx) * k, (connection.jointB.position.y + ry) * k,
-                              connection.getStrain()))
+                              0))
 
         for point in self.points:
             points.append(((point.position.x + rx) * k, (point.position.y + ry) * k, point.isStationary))
 
         return lines, points
 
-    def render(self, fileName: str, width: int = 640, height: int = 480, bounds: float = 1.05, model=None):
+    def render(self, fileName: str, width: int = 640, height: int = 480, bounds: float = 1.05, model=None) -> None:
         """
-        Renders the bridge to a png file.
+        Renders the bridge to a png file
+        :param fileName: File name
+        :param width: Image width
+        :param height: Image height
+        :param bounds: Extra empty space around model
+        :param model: Bridge to render
+        :return: None
         """
 
         from PIL import Image, ImageDraw
@@ -353,7 +207,7 @@ class Bridge:
 
         image.save(fileName)
 
-    def updateAll(self):
+    def updateAll(self) -> None:
         """
         Utility method to call update method on every connection of the bridge
         """
@@ -361,119 +215,30 @@ class Bridge:
         for con in self.connections:
             con.update()
 
-    def updateOnJoint(self, joint):
+    def updateOnJoint(self, joint) -> None:
         """
         Utility method to all update method on every connection of the bridge
         with specified ending point
-        :param joint: ending point of the connections
+        :param joint: Ending point of the connections
         """
 
         for con in self.connections:
             if con.jointA == joint or con.jointB == joint:
                 con.update()
 
-    def getConnectedToJoint(self, joint):
+    def getConnectedToJoint(self, joint) -> List[Connection]:
         """
         Method to acquire every connection of the bridge
         with specified ending point
-        :param joint: ending point of the connections
-        :return: list of connections
+        :param joint: Ending point of the connections
+        :return: List of connections
         """
 
         return [con for con in self.connections if con.jointA == joint or con.jointB == joint]
-    
-    def getKineticEnergy(self, gravity : m2.Vector2 = m2.Vector2(0, -9.81)):
-        """
-        Returns kinetic energy of the bridge.
-        """
-        return sum(sqr(j.velocity.length()) * j.inertia / 2 - j.position * gravity for j in self.points)
-
-    def getPotentialEnergy(self, gravity : m2.Vector2 = m2.Vector2(0, -9.81)):
-        """
-        Returns potential energy of the bridge.
-        """
-        return sum( - j.position * gravity for j in self.points)
-
-    def getEnergy(self, gravity : m2.Vector2 = m2.Vector2(0, -9.81)):
-        """
-        Returns sum of potential and kinetic energy of the bridge. 
-        Do not calculate spring energy.
-        """
-        return self.getPotentialEnergy(gravity) + self.getKineticEnergy(gravity)
-    
-    def relaxPendulums(self, gravity : m2.Vector2 = m2.Vector2(0, -9.81)):
-        """
-        Stops all single pendulums (single connections).
-        """
-        
-        for i, j in enumerate(self.points):
-            j.indexOnBridge = i
-            j.connectionCount = 0
-                    
-        for c in self.connections:
-            c.jointA.connectionCount += 1
-            c.jointB.connectionCount += 1
-            
-        for j in self.points:        
-            if j.connectionCount == 0:
-                j.isStationary = True
-        
-        for c1 in self.connections:
-            for c2 in self.connections:
-                if c1 != c2:
-                    if (c1.jointA.indexOnBridge == c2.jointA.indexOnBridge and c1.jointB.indexOnBridge == c2.jointB.indexOnBridge) or (c1.jointA.indexOnBridge == c2.jointB.indexOnBridge and c1.jointB.indexOnBridge == c2.jointA.indexOnBridge):
-                            c1.jointA.connectionCount -= 0.5
-                            c1.jointB.connectionCount -= 0.5
-            
-        gravityTensor = gravity.normal()
-            
-        for c in self.connections:
-            if c.jointA.connectionCount <= 1.01 and (not c.jointA.isStationary):
-                c.jointA.position = c.jointB.position + gravityTensor * c.length
-            if c.jointB.connectionCount <= 1.01 and (not c.jointB.isStationary):
-                c.jointB.position = c.jointA.position + gravityTensor * c.length
-
-    def removeFallings(self):
-        """
-        Removes all bridge parts which are not connected with any stationary point or another point which is not falling.
-        By default every connection is falling.
-        """
-        for j in self.points:
-            j.isConnectedWithStationary = j.isStationary
-        
-        for i in range(len(self.connections)):
-            noFalse = True
-            for con in self.connections:
-                status = con.jointA.isConnectedWithStationary or con.jointB.isConnectedWithStationary
-                con.jointA.isConnectedWithStationary = status
-                con.jointB.isConnectedWithStationary = status
-                if not status:
-                    noFalse = False
-            if noFalse:
-                break
-                        
-        for con in self.connections:            
-            status = con.jointA.isConnectedWithStationary or con.jointB.isConnectedWithStationary
-            con.broken = not status                        
-        
-    def setSoften(self, newSoften: float):
-        """
-        Set spring forces of all materials.
-        """
-        for con in self.connections:
-            con.soften = newSoften    
-            
-    def checkFalls(self, gravity, trigger: float = 1e9):
-        """
-        Checks if some part of bridge fallen down.
-        """
-        for c in self.connections:
-            if max(c.jointA.position * gravity, c.jointB.position * gravity) >= trigger:
-                c.broken = True      
                 
-    def addAdditionalMassToConnections(self):
+    def addAdditionalMassToConnections(self) -> None:
         """
-        Adds additional mass to the road (like tanks etc.).
+        Adds additional mass to the road (like tanks etc.)
         """
         for con in self.connections:
             if con.material == self.materials[0]:
@@ -510,18 +275,18 @@ class Bridge:
             c.jointA.connections.append(c)
             c.jointB.connections.append(c)
             
-        def doit(joint, another):
+        def traverse(joint, another):
             if joint.wasHere:
                 return False
             joint.wasHere = True
             if joint == another:
                 return True
             for c in joint.connections:
-                if doit(c.jointA, another) or doit(c.jointB, another):
+                if traverse(c.jointA, another) or traverse(c.jointB, another):
                     return True
             return False
         
-        return doit(a, b)        
+        return traverse(a, b)
 
 
 class Material:
@@ -584,7 +349,17 @@ class RawMaterial:
             self.youngModule) + " [N/m^2], yieldStrength: " + str(self.yieldStrength) + " [N/m^2], cost: " + str(
             self.cost) + " [$/kg]}"
 
-    def createMaterial(self, subname: str, maxLength: float, gauge: float, line: bool = False, customDesc: str = None):
+    def createMaterial(self, subname: str, maxLength: float, gauge: float, line: bool = False, customDesc: str = None) \
+            -> Material:
+        """
+        Function to generate material out of raw substance
+        :param subname: Name of the sub group
+        :param maxLength: Maximal length of the beams
+        :param gauge: Surface size
+        :param line: Is it a line like material
+        :param customDesc: Extra description
+        :return: Material usable for beam creation
+        """
         if subname is None:
             subname = self.name
         if customDesc is None:

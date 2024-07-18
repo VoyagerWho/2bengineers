@@ -1,24 +1,19 @@
 import tbutils.math2d as m2
 import math
 from tbutils.bridgeparts import Joint, Connection, Bridge, Material
+from typing import List
 
 
 class Builder:
     """
-    Class responsible of creating and initializing objects
+    Class responsible of creating and initializing basic models of bridges
     """
 
     @staticmethod
-    def createMaterialsList():
+    def createMaterialsList() -> List[Material]:
         """
         Method to initialize list of starting materials
         :return: list of materials
-        """
-        """
-        defMaxCompression = 0.9
-        defMaxStrech = 1.1
-        defCompressionForceRate = 1e4
-        defStrechForceRate = 1e4
         """
         materials = [
             Material(
@@ -43,7 +38,8 @@ class Builder:
         return materials
 
     @staticmethod
-    def buildInitial(materials, a, b, noStat=0, stat=None):
+    def build_initial(materials: List[Material], a: m2.Vector2, b: m2.Vector2, noStat: int = 0,
+                      stat: None or List[m2.Vector2] = None) -> Bridge:
         """
         Function to create initial procedural solution
         :param materials: list of the materials[0-road, 1-main, ...]
@@ -165,5 +161,124 @@ class Builder:
         bridge = Bridge()
         bridge.points = joints
         bridge.connections = beams
+        bridge.materials = materials
+        return bridge
+
+    @staticmethod
+    def build_spike(materials: List[Material]) -> Bridge:
+        """
+        Function to create almost optimal model
+        :param materials: list of the materials[0-road, 1-main, ...]
+        :return: Bridge object representing prepared structure
+        """
+        joints = [Joint(m2.Vector2(-50.0, 0.0), True), Joint(m2.Vector2(50.0, 0.0), True),
+                  Joint(m2.Vector2(0.0, 10.0))]
+        con = [Connection.makeCFM(joints[0], joints[2], materials[0]),
+               Connection.makeCFM(joints[1], joints[2], materials[0]),
+               ]
+        bridge = Bridge()
+        bridge.points = joints
+        bridge.connections = con
+        bridge.materials = materials
+        return bridge
+
+    @staticmethod
+    def build_pendulum(materials: List[Material]) -> Bridge:
+        """
+        Function to create model with one additional pendulum
+        :param materials: list of the materials[0-road, 1-main, ...]
+        :return: Bridge object representing prepared structure
+        """
+        joints = [Joint(m2.Vector2(-50.0, 0.0), True), Joint(m2.Vector2(50.0, 0.0), True),
+                  Joint(m2.Vector2(0.0, 0.0)), Joint(m2.Vector2(-5.0, 35.0))]
+        con = [Connection.makeCFM(joints[0], joints[2], materials[0]),
+               Connection.makeCFM(joints[1], joints[2], materials[0]),
+               Connection.makeCFM(joints[3], joints[2], materials[0]),
+               ]
+        bridge = Bridge()
+        bridge.points = joints
+        bridge.connections = con
+        bridge.materials = materials
+        return bridge
+
+    @staticmethod
+    def build_mesh(materials: List[Material]) -> Bridge:
+        """
+        Function to create model of multiple quadrangles
+        :param materials: list of the materials[0-road, 1-main, ...]
+        :return: Bridge object representing prepared structure
+        """
+        xoffset = 950 // 2
+        yoffset = 25
+        joints = [
+            Joint(m2.Vector2(-75.0 - xoffset, 0.0 - yoffset), True),
+            Joint(m2.Vector2(825.0 - xoffset, 0.0 - yoffset), True),
+            Joint(m2.Vector2(-100.0 - xoffset, 0.0 - yoffset), True),
+            Joint(m2.Vector2(850.0 - xoffset, 0.0 - yoffset), True),
+            Joint(m2.Vector2(-75.0 - xoffset, 75.0 - yoffset)),
+            Joint(m2.Vector2(825.0 - xoffset, 75.0 - yoffset)),
+
+        ]
+        prev_ref = [joints[0], joints[4]]
+        con = [Connection.makeCFM(joints[0], joints[4], materials[0])]
+        for i in range(0, 751, 75):
+            joints.append(Joint(m2.Vector2(i - xoffset, 0.0 - yoffset)))
+            joints.append(Joint(m2.Vector2(i - xoffset, 75.0 - yoffset)))
+            con.append(Connection.makeCFM(joints[-1], joints[-2], materials[0]))
+            con.append(Connection.makeCFM(joints[-1], prev_ref[-1], materials[0]))
+            con.append(Connection.makeCFM(joints[-2], prev_ref[-2], materials[0]))
+            prev_ref = [joints[-2], joints[-1]]
+        con.append(Connection.makeCFM(joints[2], joints[4], materials[0]))
+        con.append(Connection.makeCFM(joints[3], joints[5], materials[0]))
+        con.append(Connection.makeCFM(joints[1], joints[5], materials[0]))
+        con.append(Connection.makeCFM(joints[-1], joints[5], materials[0]))
+        con.append(Connection.makeCFM(joints[-2], joints[1], materials[0]))
+        bridge = Bridge()
+        bridge.points = joints
+        bridge.connections = con
+        bridge.materials = materials
+        return bridge
+
+    @staticmethod
+    def build_gap(materials: List[Material]) -> Bridge:
+        """
+        Function to create model not semi valid model with gap
+        :param materials: list of the materials[0-road, 1-main, ...]
+        :return: Bridge object representing prepared structure
+        """
+        joints = [Joint(m2.Vector2(-75.0, 0.0), True), Joint(m2.Vector2(75.0, 0.0), True),
+                  Joint(m2.Vector2(-25.0, 10.0)), Joint(m2.Vector2(25.0, 10.0))]
+        con = [Connection.makeCFM(joints[0], joints[2], materials[0]),
+               Connection.makeCFM(joints[1], joints[3], materials[0]),
+               ]
+        bridge = Bridge()
+        bridge.points = joints
+        bridge.connections = con
+        bridge.materials = materials
+        return bridge
+
+    @staticmethod
+    def build_wave(materials: List[Material]) -> Bridge:
+        """
+        Function to create unstable model with road in the shape of wave
+        :param materials: list of the materials[0-road, 1-main, ...]
+        :return: Bridge object representing prepared structure
+        """
+        xoffset = 150
+        joints = [Joint(m2.Vector2(300.0 - xoffset, 0.0), True),
+                  Joint(m2.Vector2(0.0 - xoffset, 0.0), True), ]
+        con = []
+        for i in range(0, 101, 100):
+            joints.append(Joint(m2.Vector2(i + 50.0 - xoffset, 50.0)))
+            joints.append(Joint(m2.Vector2(i + 100.0 - xoffset, 0.0)))
+            con.append(Connection.makeCFM(joints[-3], joints[-2], materials[0]))
+            con.append(Connection.makeCFM(joints[-2], joints[-1], materials[0]))
+        joints.append(Joint(m2.Vector2(250.0 - xoffset, 50.0)))
+        con.append(Connection.makeCFM(joints[-2], joints[-1], materials[0]))
+        con.append(Connection.makeCFM(joints[-1], joints[0], materials[0]))
+        joints.append(Joint(m2.Vector2(150.0 - xoffset, -50.0), True))
+        bridge = Bridge()
+        bridge.points = joints
+        bridge.connections = con
         bridge.materials = materials
         return bridge

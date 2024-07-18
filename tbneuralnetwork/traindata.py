@@ -1,13 +1,12 @@
 from typing import List, Tuple
-
 import tbutils.materiallist as mat_list
 import tbutils.math2d as m2
 import tbsymulator.mechanicsFEM as simulator
-from tbutils.bridgeparts import Bridge, Joint, Connection, Material
+from tbutils.bridgeparts import Bridge, Material
 from tbutils.builder import Builder
 import numpy as np
 
-#: Every bridge is represented as triplet (bridge: Bridge, steps: int, complexity: int)
+#: Every dataset is represented as triplet (bridge: Bridge, steps: int, complexity: int)
 STRUCTURES: int = 6
 RANDOM: int = 5
 DEFECTIVE: int = 4
@@ -19,116 +18,13 @@ MATERIALS: List[Material] = [
     mat_list.materialList[3],
     ]
 
-
-def build_initial():
-    left = -100.0
-    right = 100.0
-    top = 25.0
-    bottom = -25.0
-    stat = [m2.Vector2(left, bottom), m2.Vector2(right, bottom), ]
-    return Builder.buildInitial(MATERIALS, m2.Vector2(left, top), m2.Vector2(right, top), 1, stat)
-
-
-def build_spike():
-    joints = [Joint(m2.Vector2(-50.0, 0.0), True), Joint(m2.Vector2(50.0, 0.0), True),
-              Joint(m2.Vector2(0.0, 10.0))]
-    con = [Connection.makeCFM(joints[0], joints[2], MATERIALS[0]),
-           Connection.makeCFM(joints[1], joints[2], MATERIALS[0]),
-           ]
-    bridge = Bridge()
-    bridge.points = joints
-    bridge.connections = con
-    bridge.materials = MATERIALS
-    return bridge
-
-
-def build_pendulum():
-    joints = [Joint(m2.Vector2(-50.0, 0.0), True), Joint(m2.Vector2(50.0, 0.0), True),
-              Joint(m2.Vector2(0.0, 0.0)), Joint(m2.Vector2(-5.0, 35.0))]
-    con = [Connection.makeCFM(joints[0], joints[2], MATERIALS[0]),
-           Connection.makeCFM(joints[1], joints[2], MATERIALS[0]),
-           Connection.makeCFM(joints[3], joints[2], MATERIALS[0]),
-           ]
-    bridge = Bridge()
-    bridge.points = joints
-    bridge.connections = con
-    bridge.materials = MATERIALS
-    return bridge
-
-
-def build_mesh():
-    xoffset = 950//2
-    yoffset = 25
-    joints = [
-        Joint(m2.Vector2(-75.0 - xoffset, 0.0 - yoffset), True),
-        Joint(m2.Vector2(825.0 - xoffset, 0.0 - yoffset), True),
-        Joint(m2.Vector2(-100.0 - xoffset, 0.0 - yoffset), True),
-        Joint(m2.Vector2(850.0 - xoffset, 0.0 - yoffset), True),
-        Joint(m2.Vector2(-75.0 - xoffset, 75.0 - yoffset)),
-        Joint(m2.Vector2(825.0 - xoffset, 75.0 - yoffset)),
-
-    ]
-    prev_ref = [joints[0], joints[4]]
-    con = [Connection.makeCFM(joints[0], joints[4], MATERIALS[0])]
-    for i in range(0, 751, 75):
-        joints.append(Joint(m2.Vector2(i - xoffset, 0.0 - yoffset)))
-        joints.append(Joint(m2.Vector2(i - xoffset, 75.0 - yoffset)))
-        con.append(Connection.makeCFM(joints[-1], joints[-2], MATERIALS[0]))
-        con.append(Connection.makeCFM(joints[-1], prev_ref[-1], MATERIALS[0]))
-        con.append(Connection.makeCFM(joints[-2], prev_ref[-2], MATERIALS[0]))
-        prev_ref = [joints[-2], joints[-1]]
-    con.append(Connection.makeCFM(joints[2], joints[4], MATERIALS[0]))
-    con.append(Connection.makeCFM(joints[3], joints[5], MATERIALS[0]))
-    con.append(Connection.makeCFM(joints[1], joints[5], MATERIALS[0]))
-    con.append(Connection.makeCFM(joints[-1], joints[5], MATERIALS[0]))
-    con.append(Connection.makeCFM(joints[-2], joints[1], MATERIALS[0]))
-    bridge = Bridge()
-    bridge.points = joints
-    bridge.connections = con
-    bridge.materials = MATERIALS
-    return bridge
-
-
-def build_gap():
-    joints = [Joint(m2.Vector2(-75.0, 0.0), True), Joint(m2.Vector2(75.0, 0.0), True),
-              Joint(m2.Vector2(-25.0, 10.0)), Joint(m2.Vector2(25.0, 10.0))]
-    con = [Connection.makeCFM(joints[0], joints[2], MATERIALS[0]),
-           Connection.makeCFM(joints[1], joints[3], MATERIALS[0]),
-           ]
-    bridge = Bridge()
-    bridge.points = joints
-    bridge.connections = con
-    bridge.materials = MATERIALS
-    return bridge
-
-
-def build_wave():
-    xoffset = 150
-    joints = [Joint(m2.Vector2(300.0 - xoffset, 0.0), True),
-              Joint(m2.Vector2(0.0 - xoffset, 0.0), True), ]
-    con = []
-    for i in range(0, 101, 100):
-        joints.append(Joint(m2.Vector2(i + 50.0 - xoffset, 50.0)))
-        joints.append(Joint(m2.Vector2(i + 100.0 - xoffset, 0.0)))
-        con.append(Connection.makeCFM(joints[-3], joints[-2], MATERIALS[0]))
-        con.append(Connection.makeCFM(joints[-2], joints[-1], MATERIALS[0]))
-    joints.append(Joint(m2.Vector2(250.0 - xoffset, 50.0)))
-    con.append(Connection.makeCFM(joints[-2], joints[-1], MATERIALS[0]))
-    con.append(Connection.makeCFM(joints[-1], joints[0], MATERIALS[0]))
-    joints.append(Joint(m2.Vector2(150.0 - xoffset, -50.0), True))
-    bridge = Bridge()
-    bridge.points = joints
-    bridge.connections = con
-    bridge.materials = MATERIALS
-    return bridge
-
-
-BRIDGES[0] = (build_initial(), 2, 4)
-BRIDGES[1] = (build_spike(), 1, 2)
-BRIDGES[2] = (build_pendulum(), 1, 2)
-BRIDGES[3] = (build_mesh(), 2, 4)
-BRIDGES[4] = (build_gap(), 1, 2)
-BRIDGES[5] = (build_wave(), 2, 2)
+BRIDGES[0] = (Builder.build_initial(MATERIALS, m2.Vector2(-100.0, 25.0), m2.Vector2(100.0, 25.0), 1,
+                                    [m2.Vector2(-100.0, -25.0), m2.Vector2(100.0, -25.0), ]), 2, 4)
+BRIDGES[1] = (Builder.build_spike(MATERIALS), 1, 2)
+BRIDGES[2] = (Builder.build_pendulum(MATERIALS), 1, 2)
+BRIDGES[3] = (Builder.build_mesh(MATERIALS), 2, 4)
+BRIDGES[4] = (Builder.build_gap(MATERIALS), 1, 2)
+BRIDGES[5] = (Builder.build_wave(MATERIALS), 2, 2)
 
 if RANDOM > 0:
     j = STRUCTURES

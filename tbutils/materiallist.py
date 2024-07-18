@@ -1,5 +1,4 @@
 from tbutils.bridgeparts import RawMaterial
-from tbutils.bridgeparts import Material
 
 
 def moldingGaugeI(thickness: float, size: float):
@@ -15,7 +14,7 @@ rawMaterialList = [
                 desc="Material for roads (required)"),
     RawMaterial(name="Steel", density=7750, youngModule=2.0e11, yieldStrength=6.5e8, cost=0.24),
     RawMaterial(name="Diamond", density=352, youngModule=1.2e12, yieldStrength=1.6e8, cost=90.0),
-    RawMaterial(name="Titanum", density=4507, youngModule=1.66e11, yieldStrength=2.1e8, cost=1.22),
+    RawMaterial(name="Titanium", density=4507, youngModule=1.66e11, yieldStrength=2.1e8, cost=1.22),
     RawMaterial(name="Iron", density=7870, youngModule=2.11e11, yieldStrength=1.0e8, cost=0.12),
     RawMaterial(name="Wood", density=600, youngModule=1.0e10, yieldStrength=4.0e7, cost=0.18),
     RawMaterial(name="Nylon", density=1150, youngModule=2.93e9, yieldStrength=9.0e8, cost=1.00),
@@ -38,13 +37,13 @@ materialList = [
     rawMaterialDictionary["Steel"].createMaterial(subname="Steel molding 500x45", maxLength=100.0,
                                                   gauge=moldingGaugeI(0.045, 0.5), line=False),
 
-    rawMaterialDictionary["Titanum"].createMaterial(subname="Titanum molding 100x15", maxLength=100.0,
+    rawMaterialDictionary["Titanium"].createMaterial(subname="Titanium molding 100x15", maxLength=100.0,
                                                     gauge=moldingGaugeI(0.015, 0.1), line=False),
-    rawMaterialDictionary["Titanum"].createMaterial(subname="Titanum molding 200x20", maxLength=100.0,
+    rawMaterialDictionary["Titanium"].createMaterial(subname="Titanium molding 200x20", maxLength=100.0,
                                                     gauge=moldingGaugeI(0.020, 0.2), line=False),
-    rawMaterialDictionary["Titanum"].createMaterial(subname="Titanum molding 300x25", maxLength=100.0,
+    rawMaterialDictionary["Titanium"].createMaterial(subname="Titanium molding 300x25", maxLength=100.0,
                                                     gauge=moldingGaugeI(0.025, 0.3), line=False),
-    rawMaterialDictionary["Titanum"].createMaterial(subname="Titanum molding 500x45", maxLength=100.0,
+    rawMaterialDictionary["Titanium"].createMaterial(subname="Titanium molding 500x45", maxLength=100.0,
                                                     gauge=moldingGaugeI(0.045, 0.5), line=False),
 
     rawMaterialDictionary["Iron"].createMaterial(subname="Iron molding 100x15", maxLength=100.0,

@@ -7,6 +7,11 @@ from tbutils.bridgeparts import Bridge
 
 
 def show_all(total: int) -> None:
+    """
+    Function to recalculate individual scores of all models from training
+    :param total: Number of models to display
+    :return: None
+    """
     scores = [0 for _ in range(total)]
     for i in range(total):
         with open(f"train_results/winnerBridge{i}.pkl", "rb") as f:
@@ -18,6 +23,12 @@ def show_all(total: int) -> None:
 
 
 def compare(old_bridge: Tuple[Bridge, List[float], float], new_bridge: Tuple[Bridge, List[float], float]) -> None:
+    """
+    Function to compare scores and structures of two bridges
+    :param old_bridge: First model, on the left in the output
+    :param new_bridge: Second model, on the right in the output
+    :return: None
+    """
     old_score = score(old_bridge[0], old_bridge[1], old_bridge[2])
     new_score = score(new_bridge[0], new_bridge[1], new_bridge[2])
     print(f"Score:  {old_score} -> {new_score}")
@@ -34,10 +45,20 @@ def compare(old_bridge: Tuple[Bridge, List[float], float], new_bridge: Tuple[Bri
 
 
 def get_from_traindata(bridge_id: int) -> Tuple[Bridge, List[float], float]:
+    """
+    Function to load model from training dataset
+    :param bridge_id: Id of the model
+    :return: Record containing: Bridge, Simulation results, Budget
+    """
     return td.BRIDGES[bridge_id][0], td.BRIDGES_RESULTS[bridge_id][1], td.BUDGETS[bridge_id]
 
 
 def get_from_results(bridge_id: int) -> Tuple[Bridge, List[float], float]:
+    """
+    Function to load model from train results
+    :param bridge_id: Id of the model
+    :return: Record containing: Bridge, Simulation results, Budget extracted from training dataset
+    """
     with open(f"train_results/winnerBridge{bridge_id}.pkl", "rb") as f:
         bridge = pickle.load(f)
     (_, rs, _) = simulate(bridge)

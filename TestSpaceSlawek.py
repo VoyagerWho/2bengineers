@@ -20,7 +20,7 @@ if __name__ == '__main__':
                  mat_list.materialList[7],
                  mat_list.materialList[19], ]
     stat = [m2.Vector2(100.0, 250.0), m2.Vector2(right, 250.0), ]
-    bridge = Builder.buildInitial(materials, m2.Vector2(100.0, 300.0), m2.Vector2(right, 300.0), 0, stat)
+    bridge = Builder.build_initial(materials, m2.Vector2(100.0, 300.0), m2.Vector2(right, 300.0), 0, stat)
 
     # print([f'{con.length:0.1f}' for con in bridge.connections])
 

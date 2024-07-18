@@ -1,14 +1,21 @@
 import numpy as np
 import numpy.linalg as np_lin
-import scipy.linalg as la
 from math import sqrt
 import tbutils.math2d as m2
 from tbutils.builder import Builder
 from tbutils.bridgeparts import Bridge, Connection, Joint
 import tbutils.materiallist as mat_list
+from typing import Tuple, List
 
 
-def simulate(bridge_original: Bridge, gravity: m2.Vector2 = m2.Vector2(0, -9.81)):
+def simulate(bridge_original: Bridge, gravity: m2.Vector2 = m2.Vector2(0, -9.81)) -> Tuple[int, List[float], List[int]]:
+    """
+    Physics simulator based on Finite Elements Method
+    :param bridge_original: model to simulate
+    :param gravity: force of gravity
+    :return: Results as tuple (whether something broke, list of beam strain in % of material strength,
+    list of whether that beam broke)
+    """
     bridge = bridge_original.copy()
     # insertion of numerical resistance connection
     numerical_resistance = mat_list.materialList[-1]
@@ -18,6 +25,12 @@ def simulate(bridge_original: Bridge, gravity: m2.Vector2 = m2.Vector2(0, -9.81)
     bridge.points.append(joint_b)
 
     def add_connection(stationary: Joint, tested: Joint):
+        """
+        Helper function to add extra beams for numerical resistance
+        :param stationary: Stationary hook for the beam
+        :param tested: Joint to attach if not stationary
+        :return: 1 if added a beam 0 otherwise
+        """
         if (len(bridge.getConnectedToJoint(tested)) > 0) and (not tested.isStationary):
             bridge.connections.append(Connection.makeCFM(stationary, tested, numerical_resistance))
             bridge.connections[-1].update()
@@ -139,7 +152,12 @@ def simulate(bridge_original: Bridge, gravity: m2.Vector2 = m2.Vector2(0, -9.81)
                [0 if p < 1.0 else 1 for p in strains_percentage]
 
 
-def ek_mat(cs: np.ndarray):
+def ek_mat(cs: np.ndarray) -> np.ndarray:
+    """
+    Helper function to generate local stiffness matrix base
+    :param cs: list of values of cosine and sine of the beam
+    :return: 2x2 matrix
+    """
     # print(f'cs: {cs}')
     b = np.array([-cs[0], -cs[1], cs[0], cs[1]], ndmin=2)
     return b.transpose() * b
@@ -154,7 +172,7 @@ if __name__ == '__main__':
     #              mat_list.materialList[-1],
     #              ]
     # stat = [m2.Vector2(100.0, 250.0), m2.Vector2(right, 250.0), ]
-    # test_bridge = Builder.buildInitial(materials, m2.Vector2(100.0, 300.0),
+    # test_bridge = Builder.build_initial(materials, m2.Vector2(100.0, 300.0),
     #                                    m2.Vector2(right, 300.0))
     # for j in test_bridge.points:
     #     j.position = j.position/10
