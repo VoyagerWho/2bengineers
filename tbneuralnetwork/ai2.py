@@ -78,6 +78,7 @@ FEED_FORWARD = "-feedforward-v2"
 RECURRENT = "-recurrent"
 CURRENT = RECURRENT
 
+
 class BridgeEvolution:
     """
     Main class for evolving the bridge structure
@@ -110,7 +111,7 @@ class BridgeEvolution:
         to allow steady progress
         :param no_generations: max amount of evolution per pair in iteration
         """
-        pe = neat.ParallelEvaluator(multiprocessing.cpu_count(), eval_genome)
+        pe = neat.ParallelEvaluator(multiprocessing.cpu_count()-2, eval_genome)
         self.winner = self.p.run(pe.evaluate, no_generations)
 
         print('\nBest genome:\n{!s}'.format(self.winner))
@@ -242,7 +243,7 @@ if __name__ == '__main__':
                                   1,
                                   [m2.Vector2(0.0, 75.0)])
     bridge.render("Test.png")
-    new_bridge = chamber.upgrade(bridge, "Test", 4)
+    new_bridge = chamber.upgrade(bridge, "Test", 1)
 
     joints = [Joint(m2.Vector2(-25.0, 0.0), True), Joint(m2.Vector2(25.0, 0.0), True), ]
     con = []

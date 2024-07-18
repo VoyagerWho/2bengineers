@@ -13,7 +13,7 @@ def process_generation_block(block: str) -> []:
 
 
 if __name__ == "__main__":
-    name = "RNN6"
+    name = "RNN8"
     file = f"TrainLog{name}.txt"
     data = f"data{name}.csv"
     summary = ""

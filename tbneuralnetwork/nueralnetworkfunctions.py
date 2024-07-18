@@ -152,7 +152,7 @@ def score(bridge_local: Bridge, strains, budget: float):
     cost_offset = 0.5 * math.atan((budget - cost)/budget) / math.pi
     if bridge_local.isSemiValid():
         return max(1 - min(max_strain**2, 1.0)/2.0 + cost_offset, 0.0)
-    return max(0.5 + cost_offset, 0.0)
+    return max(0.5 - cost_offset, 0.0)
 
 
 def create_inputs(bridge: Bridge, break_moments, strains, complexity):

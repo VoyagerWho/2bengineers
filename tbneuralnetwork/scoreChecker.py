@@ -21,7 +21,7 @@ def compare(old_bridge: Tuple[Bridge, List[float], float], new_bridge: Tuple[Bri
     old_score = score(old_bridge[0], old_bridge[1], old_bridge[2])
     new_score = score(new_bridge[0], new_bridge[1], new_bridge[2])
     print(f"Score:  {old_score} -> {new_score}")
-    print(f"Strain: {max(old_bridge[1])} -> {max(new_bridge[1])}")
+    print(f"Strain: {max(old_bridge[1], default=-1.0)} -> {max(new_bridge[1], default=-1.0)}")
     print(f"Points: {len(old_bridge[0].points)} -> {len(new_bridge[0].points)}")
     for p1, p2 in zip(old_bridge[0].points, new_bridge[0].points):
         print(f"Pos:    {p1.position} -> {p2.position}")
@@ -45,8 +45,8 @@ def get_from_results(bridge_id: int) -> Tuple[Bridge, List[float], float]:
 
 
 if __name__ == "__main__":
-    show_all(60)
-    # ob = get_from_traindata(0)
+    # show_all(60)
+    ob = get_from_traindata(5)
     # nb = get_from_traindata(6)
-    # nb = get_from_results(0)
-    # compare(ob, nb)
+    nb = get_from_results(5)
+    compare(ob, nb)
